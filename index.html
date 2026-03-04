@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parlay Bot | March 4, 2026</title>
+    <meta name="description"
+        content="AI-powered parlay betting assistant with game analysis, odds, and recommended parlay combinations.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <!-- PASSWORD GATE -->
+    <div id="password-gate" class="password-gate">
+        <div class="pw-card">
+            <div class="pw-icon">🎯</div>
+            <h1 class="pw-title">PARLAY BOT</h1>
+            <p class="pw-subtitle">AI-Powered Betting Research</p>
+            <p class="pw-desc">Enter the password to continue</p>
+            <div class="pw-input-group">
+                <input type="password" id="pw-input" class="pw-input" placeholder="Password"
+                    onkeydown="if(event.key==='Enter')attemptLogin()">
+                <button class="pw-btn" onclick="attemptLogin()">Enter →</button>
+            </div>
+            <p id="pw-error" class="pw-error" style="display:none;">Wrong password. Try again.</p>
+        </div>
+    </div>
+
+    <!-- APP (hidden until auth) -->
+    <div id="app-wrapper" style="display:none;">
+        <!-- Header -->
+        <header id="main-header">
+            <div class="header-content">
+                <div class="brand">
+                    <div class="brand-icon">🎯</div>
+                    <div>
+                        <h1 class="brand-title">PARLAY BOT</h1>
+                        <p class="brand-subtitle">AI-Powered Betting Research</p>
+                    </div>
+                </div>
+                <div class="header-meta">
+                    <div class="date-badge">
+                        <span class="date-icon">📅</span>
+                        <span>Wednesday, March 4, 2026</span>
+                    </div>
+                    <div class="live-indicator">
+                        <span class="live-dot"></span>
+                        <span>LIVE ODDS</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main id="app">
+            <!-- Parlay Builder Bar -->
+            <section id="parlay-builder" class="parlay-builder">
+                <div class="parlay-builder-header">
+                    <div class="parlay-builder-title">
+                        <span class="parlay-icon">🎰</span>
+                        <h2>Your Parlay Slip</h2>
+                        <span id="leg-count" class="leg-count">0 legs</span>
+                    </div>
+                    <button id="clear-parlay" class="btn-clear" onclick="clearParlay()">Clear All</button>
+                </div>
+                <div id="parlay-picks" class="parlay-picks">
+                    <p class="empty-slip">Click picks below to add them to your parlay</p>
+                </div>
+                <div class="parlay-summary">
+                    <div class="parlay-stat">
+                        <span class="stat-label">Combined Odds</span>
+                        <span id="combined-odds" class="stat-value">—</span>
+                    </div>
+                    <div class="parlay-stat">
+                        <span class="stat-label">$100 Payout</span>
+                        <span id="payout" class="stat-value payout-value">—</span>
+                    </div>
+                    <div class="parlay-stat">
+                        <span class="stat-label">Parlay Confidence</span>
+                        <span id="parlay-confidence" class="stat-value">—</span>
+                    </div>
+                    <div class="parlay-stat conf-bar-wrapper">
+                        <span class="stat-label">Confidence Meter</span>
+                        <div class="conf-bar">
+                            <div id="conf-bar-fill" class="conf-bar-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- League Filters -->
+            <div class="filter-bar" id="filter-bar"></div>
+
+            <!-- Recommended Parlays -->
+            <section id="recommended-section" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">🔥 Recommended Parlays</h2>
+                    <p class="section-desc">AI-analyzed combinations ranked by confidence & value</p>
+                </div>
+                <div id="recommended-parlays" class="recommended-grid"></div>
+            </section>
+
+            <!-- Games Section -->
+            <section id="games-section" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">📊 Today's Games Analysis</h2>
+                    <p class="section-desc">Click picks to add to your parlay — ML, Spread, and Over/Under available</p>
+                </div>
+                <div id="games-grid" class="games-grid"></div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer>
+            <p>⚠️ For entertainment purposes only. Please gamble responsibly. Past performance does not guarantee future
+                results.</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
