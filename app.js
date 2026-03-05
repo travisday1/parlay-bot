@@ -276,11 +276,19 @@ function createGameCard(game) {
     const ouLabel = isNHL ? 'O/U Goals' : 'O/U Points';
     const tag = getOverallConfidenceTag(game);
 
+    // Determine which picks are selected
     const awayMLSel = isPickSelected(game.id, 'awayML');
     const homeMLSel = isPickSelected(game.id, 'homeML');
-    const spreadSel = isPickSelected(game.id, 'spread');
+    const spreadFavSel = isPickSelected(game.id, 'spreadFav');
+    const spreadDogSel = isPickSelected(game.id, 'spreadDog');
     const overSel = isPickSelected(game.id, 'over');
     const underSel = isPickSelected(game.id, 'under');
+
+    // Spread: derive underdog from favorite
+    const favTeam = game.spread.team;
+    const dogTeam = favTeam === game.away.abbr ? game.home.abbr : game.away.abbr;
+    const dogValue = -game.spread.value; // flip the sign (e.g., -4.5 -> +4.5)
+    const dogSpreadConf = 100 - game.confidence.spread;
 
     return `
         <div class="game-card" data-league="${game.league}" data-id="${game.id}">
@@ -356,11 +364,17 @@ function createGameCard(game) {
                 
                 <div class="pick-row-label">Spread</div>
                 <div class="pick-row">
-                    <button class="pick-btn pick-btn-full ${spreadSel ? 'selected' : ''}" 
-                            onclick="togglePick('${game.id}', 'spread', '${game.spread.team} ${game.spread.value}', ${game.spread.odds}, ${game.confidence.spread})">
-                        <div class="pick-btn-team">${game.spread.team} ${game.spread.value}</div>
+                    <button class="pick-btn ${spreadFavSel ? 'selected' : ''}" 
+                            onclick="togglePick('${game.id}', 'spreadFav', '${favTeam} ${game.spread.value}', ${game.spread.odds}, ${game.confidence.spread})">
+                        <div class="pick-btn-team">${favTeam} ${game.spread.value}</div>
                         <div class="pick-btn-odds">${formatOdds(game.spread.odds)}</div>
                         <div class="pick-conf ${getConfidenceClass(game.confidence.spread)}">${getConfidenceLabel(game.confidence.spread)} ${game.confidence.spread}%</div>
+                    </button>
+                    <button class="pick-btn ${spreadDogSel ? 'selected' : ''}" 
+                            onclick="togglePick('${game.id}', 'spreadDog', '${dogTeam} +${dogValue}', -110, ${dogSpreadConf})">
+                        <div class="pick-btn-team">${dogTeam} +${dogValue}</div>
+                        <div class="pick-btn-odds">-110</div>
+                        <div class="pick-conf ${getConfidenceClass(dogSpreadConf)}">${getConfidenceLabel(dogSpreadConf)} ${dogSpreadConf}%</div>
                     </button>
                 </div>
                 
@@ -433,18 +447,28 @@ function togglePick(gameId, betType, label, odds, confidence) {
     const existingIndex = selectedPicks.findIndex(p => p.gameId === gameId && p.betType === betType);
 
     if (existingIndex >= 0) {
+        // Remove pick
         selectedPicks.splice(existingIndex, 1);
     } else {
+        // For O/U, remove opposite if selected
         if (betType === 'over') {
             selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'under'));
         } else if (betType === 'under') {
             selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'over'));
         }
+        // For ML, remove opposite ML if selected
         if (betType === 'awayML') {
             selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'homeML'));
         } else if (betType === 'homeML') {
             selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'awayML'));
         }
+        // For Spread, remove opposite spread if selected
+        if (betType === 'spreadFav') {
+            selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'spreadDog'));
+        } else if (betType === 'spreadDog') {
+            selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'spreadFav'));
+        }
+
         selectedPicks.push({ gameId, betType, label, odds, confidence });
     }
 
