@@ -1,169 +1,292 @@
-// ===== GAME DATA - MARCH 4, 2026 =====
+// ===== GAME DATA - MARCH 5, 2026 =====
 // Confidence: 0-100 per bet type based on research analysis
 const GAMES = [
-    // ===== NBA GAMES =====
+    // ===== NBA GAMES (9) =====
     {
         id: 'nba-1', league: 'nba', time: '7:00 PM ET',
-        away: { name: 'Thunder', abbr: 'OKC', record: '46-15', city: 'Oklahoma City' },
-        home: { name: 'Knicks', abbr: 'NYK', record: '38-22', city: 'New York' },
-        spread: { team: 'OKC', value: -4.5, odds: -110 },
-        overUnder: { total: 222, overOdds: -110, underOdds: -110 },
-        moneyline: { away: -180, home: +150 },
-        confidence: { awayML: 68, homeML: 32, spread: 52, over: 62, under: 38 },
-        pick: { team: 'OKC', type: 'ML', reason: 'Thunder are the best team in the NBA at 46-15 and lead the West by 3 games. MSG is a tough road spot but OKC has the talent edge. Spread at -4.5 is a coin flip. OVER looks good \u2014 model projects 227.6.' },
+        away: { name: 'Mavericks', abbr: 'DAL', record: '21-40', city: 'Dallas' },
+        home: { name: 'Magic', abbr: 'ORL', record: '32-28', city: 'Orlando' },
+        spread: { team: 'ORL', value: -8.5, odds: -110 },
+        overUnder: { total: 228.5, overOdds: -110, underOdds: -110 },
+        moneyline: { away: +280, home: -360 },
+        confidence: { awayML: 15, homeML: 85, spread: 62, over: 48, under: 52 },
+        pick: { team: 'ORL', type: 'ML', reason: 'Dallas is gutted: Kyrie Irving OUT (knee surgery), Dereck Lively OUT (foot surgery), Cooper Flagg questionable (midfoot). Orlando at home without Franz Wagner but still heavy favorites. ORL ML is safe. Spread -8.5 is coverable.' },
         injuries: [
-            { icon: '\ud83d\udcca', text: 'OKC 31-31-1 ATS | NYK 32-30 ATS' },
-            { icon: '\ud83d\udca1', text: 'Computer model projects 227.6 total points (OVER 222)' },
-            { icon: '\ud83c\udfdf\ufe0f', text: 'MSG is one of the toughest road environments' },
+            { icon: '\ud83d\udea8', text: 'DAL: Kyrie Irving OUT (knee surgery), Lively OUT (foot)' },
+            { icon: '\u26a0\ufe0f', text: 'DAL: Cooper Flagg questionable (midfoot sprain)' },
+            { icon: '\ud83d\udd34', text: 'ORL: Franz Wagner OUT (high ankle sprain)' },
         ]
     },
     {
-        id: 'nba-2', league: 'nba', time: '7:30 PM ET',
-        away: { name: 'Hornets', abbr: 'CHA', record: '31-31', city: 'Charlotte' },
-        home: { name: 'Celtics', abbr: 'BOS', record: '39-20', city: 'Boston' },
-        spread: { team: 'BOS', value: -6.5, odds: -110 },
-        overUnder: { total: 214, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +192, home: -234 },
-        confidence: { awayML: 38, homeML: 62, spread: 42, over: 45, under: 55 },
-        pick: { team: 'BOS', type: 'ML', reason: '\u26a0\ufe0f TRAP GAME. Charlotte is 12-3 in L15 and 10-2 ATS on back-to-backs. Boston ML is safer than the spread. UNDER looks good \u2014 both teams can grind defensively.' },
+        id: 'nba-2', league: 'nba', time: '7:00 PM ET',
+        away: { name: 'Jazz', abbr: 'UTA', record: '18-44', city: 'Utah' },
+        home: { name: 'Wizards', abbr: 'WAS', record: '16-45', city: 'Washington' },
+        spread: { team: 'UTA', value: -1.5, odds: -110 },
+        overUnder: { total: 228, overOdds: -110, underOdds: -110 },
+        moneyline: { away: -130, home: +110 },
+        confidence: { awayML: 55, homeML: 45, spread: 50, over: 55, under: 45 },
+        pick: { team: 'UTA', type: 'ML', reason: 'Tank Bowl. Both bottom-3 teams. Utah slight road favorites. Washington missing Anthony Davis, Alex Sarr, D\'Angelo Russell. Lean UTA but this is a genuine coin flip \u2014 SKIP for parlay safety.' },
         injuries: [
-            { icon: '\ud83d\udd25', text: 'CHA 12-3 in last 15, 9-game win streak earlier' },
-            { icon: '\ud83d\udcca', text: 'Hornets 10-2 ATS on 2nd night of back-to-back' },
-            { icon: '\u2b50', text: 'Jaylen Brown averaging 29 PPG this season' },
+            { icon: '\ud83d\udd34', text: 'WAS: A. Davis, Sarr, Russell, George, Whitmore all OUT' },
+            { icon: '\ud83d\udd34', text: 'UTA: Markkanen, Kessler, Nurkic, JJJ all OUT' },
+            { icon: '\u26a0\ufe0f', text: 'Tank Bowl \u2014 both teams 18-44 and 16-45' },
         ]
     },
     {
         id: 'nba-3', league: 'nba', time: '7:30 PM ET',
-        away: { name: 'Jazz', abbr: 'UTA', record: '18-42', city: 'Utah' },
-        home: { name: '76ers', abbr: 'PHI', record: '33-26', city: 'Philadelphia' },
-        spread: { team: 'PHI', value: -9.5, odds: -110 },
-        overUnder: { total: 240, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +330, home: -418 },
-        confidence: { awayML: 12, homeML: 88, spread: 65, over: 58, under: 42 },
-        pick: { team: 'PHI', type: 'ML', reason: 'Utah 18-42, full rebuild. Traded JJJ. Philly at home should dominate. Spread -9.5 is coverable with this talent gap. OVER 240 leans yes \u2014 both play fast.' },
+        away: { name: 'Nets', abbr: 'BKN', record: '15-46', city: 'Brooklyn' },
+        home: { name: 'Heat', abbr: 'MIA', record: '33-29', city: 'Miami' },
+        spread: { team: 'MIA', value: -12.5, odds: -115 },
+        overUnder: { total: 218, overOdds: -110, underOdds: -110 },
+        moneyline: { away: +550, home: -800 },
+        confidence: { awayML: 8, homeML: 92, spread: 70, over: 45, under: 55 },
+        pick: { team: 'MIA', type: 'ML', reason: 'Brooklyn at 15-46 is the worst in the East. Miami at home fighting for playoffs. This is the safest NBA ML today. Even the -12.5 spread is coverable against a full-tank Nets squad.' },
         injuries: [
-            { icon: '\u2b07\ufe0f', text: 'UTA 18-42 \u2014 2nd worst record in the West' },
-            { icon: '\ud83d\udd04', text: 'Jazz traded Jaren Jackson Jr. on Feb 3 in tank' },
-            { icon: '\ud83d\udcca', text: 'O/U at 240 \u2014 both teams play at a fast pace' },
+            { icon: '\ud83d\udcc9', text: 'BKN 15-46 \u2014 worst record in Eastern Conference' },
+            { icon: '\ud83d\udd25', text: 'MIA fighting for playoff positioning (33-29)' },
+            { icon: '\ud83d\udcca', text: 'MIA -12.5 spread \u2014 large but coverable vs tanking BKN' },
         ]
     },
     {
-        id: 'nba-4', league: 'nba', time: '8:00 PM ET',
-        away: { name: 'Trail Blazers', abbr: 'POR', record: '29-33', city: 'Portland' },
-        home: { name: 'Grizzlies', abbr: 'MEM', record: '23-37', city: 'Memphis' },
-        spread: { team: 'POR', value: -9.5, odds: -110 },
-        overUnder: { total: 236, overOdds: -110, underOdds: -110 },
-        moneyline: { away: -355, home: +280 },
-        confidence: { awayML: 88, homeML: 12, spread: 72, over: 40, under: 60 },
-        pick: { team: 'POR', type: 'ML', reason: 'Memphis is GUTTED. No Ja (18 games), no Edey (season), no Aldama, Clarke, KCP. Portland is a 10-pt road favorite \u2014 that says it all. UNDER 236 \u2014 MEM won\'t have the firepower.' },
+        id: 'nba-4', league: 'nba', time: '7:30 PM ET',
+        away: { name: 'Warriors', abbr: 'GSW', record: '31-30', city: 'Golden State' },
+        home: { name: 'Rockets', abbr: 'HOU', record: '38-22', city: 'Houston' },
+        spread: { team: 'HOU', value: -9.5, odds: -110 },
+        overUnder: { total: 215.5, overOdds: -110, underOdds: -110 },
+        moneyline: { away: +320, home: -410 },
+        confidence: { awayML: 12, homeML: 88, spread: 65, over: 52, under: 48 },
+        pick: { team: 'HOU', type: 'ML', reason: 'Houston is dominant at 38-22. Warriors are decimated: Curry OUT (knee), Butler OUT (ACL, season), Porzingis OUT (illness), Moody OUT. GSW is 8-13 without Curry. Sengun & Amen Thompson questionable for HOU but depth advantage is massive.' },
         injuries: [
-            { icon: '\ud83d\udea8', text: 'MEM: Ja Morant OUT (elbow, 18 games missed)' },
-            { icon: '\ud83d\udea8', text: 'MEM: Zach Edey OUT for season (ankle)' },
-            { icon: '\ud83d\udd34', text: 'MEM: Aldama, Clarke, KCP, Jerome all OUT' },
+            { icon: '\ud83d\udea8', text: 'GSW: Curry OUT (knee), Butler OUT (ACL, season)' },
+            { icon: '\ud83d\udd34', text: 'GSW: Porzingis OUT (illness), Moody OUT (wrist)' },
+            { icon: '\u26a0\ufe0f', text: 'HOU: Sengun (illness), Amen Thompson (ankle) questionable' },
         ]
     },
     {
-        id: 'nba-5', league: 'nba', time: '8:00 PM ET',
-        away: { name: 'Hawks', abbr: 'ATL', record: '30-31', city: 'Atlanta' },
-        home: { name: 'Bucks', abbr: 'MIL', record: '26-32', city: 'Milwaukee' },
-        spread: { team: 'MIL', value: -1, odds: -110 },
+        id: 'nba-5', league: 'nba', time: '7:30 PM ET',
+        away: { name: 'Raptors', abbr: 'TOR', record: '35-26', city: 'Toronto' },
+        home: { name: 'Timberwolves', abbr: 'MIN', record: '39-23', city: 'Minnesota' },
+        spread: { team: 'MIN', value: -7, odds: -110 },
+        overUnder: { total: 218, overOdds: -110, underOdds: -110 },
+        moneyline: { away: +230, home: -280 },
+        confidence: { awayML: 30, homeML: 70, spread: 55, over: 48, under: 52 },
+        pick: { team: 'MIN', type: 'ML', reason: 'Minnesota 39-23 and on a 4-game win streak. Toronto is solid at 35-26 but on the road without Brandon Ingram (questionable, thumb). MIN at home should handle this. Spread -7 is playable.' },
+        injuries: [
+            { icon: '\ud83d\udd25', text: 'MIN on a 4-game winning streak' },
+            { icon: '\u26a0\ufe0f', text: 'TOR: Brandon Ingram questionable (thumb sprain)' },
+            { icon: '\ud83d\udcca', text: 'MIN 39-23 at home vs TOR 35-26 on road' },
+        ]
+    },
+    {
+        id: 'nba-6', league: 'nba', time: '8:00 PM ET',
+        away: { name: 'Pistons', abbr: 'DET', record: '45-15', city: 'Detroit' },
+        home: { name: 'Spurs', abbr: 'SAS', record: '44-17', city: 'San Antonio' },
+        spread: { team: 'SAS', value: -3.5, odds: -106 },
+        overUnder: { total: 228, overOdds: -110, underOdds: -110 },
+        moneyline: { away: +140, home: -165 },
+        confidence: { awayML: 42, homeML: 58, spread: 52, over: 55, under: 45 },
+        pick: { team: 'SAS', type: 'ML', reason: '\ud83d\udd25 GAME OF THE NIGHT. #1 East (DET 45-15) vs #2 West (SAS 44-17). Spurs have home court. Both elite teams. This is a pick-em with slight home edge. OVER 228 leans yes \u2014 both teams score efficiently.' },
+        injuries: [
+            { icon: '\ud83c\udfc6', text: 'DET: #1 in East (45-15) \u2014 best record in NBA' },
+            { icon: '\ud83c\udfc6', text: 'SAS: #2 overall (44-17) \u2014 dominant at home' },
+            { icon: '\ud83d\udd25', text: 'Marquee matchup \u2014 potential Finals preview' },
+        ]
+    },
+    {
+        id: 'nba-7', league: 'nba', time: '9:00 PM ET',
+        away: { name: 'Bulls', abbr: 'CHI', record: '25-37', city: 'Chicago' },
+        home: { name: 'Suns', abbr: 'PHX', record: '35-26', city: 'Phoenix' },
+        spread: { team: 'PHX', value: -11.5, odds: -108 },
         overUnder: { total: 232, overOdds: -110, underOdds: -110 },
-        moneyline: { away: -105, home: -115 },
-        confidence: { awayML: 50, homeML: 50, spread: 48, over: 55, under: 45 },
-        pick: { team: 'ATL', type: 'ML', reason: 'True toss-up. Giannis is BACK but on a 25-min restriction. Bucks 26-32 and struggling. Hawks are fully healthy. At pick-em odds, ATL is a live dog \u2014 slight lean ATL.' },
+        moneyline: { away: +450, home: -600 },
+        confidence: { awayML: 10, homeML: 90, spread: 68, over: 52, under: 48 },
+        pick: { team: 'PHX', type: 'ML', reason: 'Phoenix 35-26 at home vs a struggling Chicago (25-37). The Suns should dominate this mismatch. Spread -11.5 is big but PHX has the firepower. Safe ML pick.' },
         injuries: [
-            { icon: '\u26a0\ufe0f', text: 'MIL: Giannis BACK but on 25-min restriction' },
-            { icon: '\ud83d\udd34', text: 'MIL: Prince OUT (neck), Porter Jr. OUT (knee)' },
-            { icon: '\u2705', text: 'ATL: Fully healthy \u2014 no major injuries' },
+            { icon: '\ud83d\udcc9', text: 'CHI 25-37 \u2014 below .500 and fading' },
+            { icon: '\u2b50', text: 'PHX at home with full squad, 35-26' },
+            { icon: '\ud83d\udcca', text: 'PHX -11.5 \u2014 large spread but coverable vs CHI' },
         ]
     },
     {
-        id: 'nba-6', league: 'nba', time: '10:00 PM ET',
-        away: { name: 'Pacers', abbr: 'IND', record: '15-46', city: 'Indiana' },
-        home: { name: 'Clippers', abbr: 'LAC', record: '27-31', city: 'Los Angeles' },
-        spread: { team: 'LAC', value: -12.5, odds: -110 },
-        overUnder: { total: 226.5, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +490, home: -671 },
-        confidence: { awayML: 8, homeML: 92, spread: 75, over: 45, under: 55 },
-        pick: { team: 'LAC', type: 'ML', reason: 'Indiana is 15-46. Haliburton out for season (torn Achilles). Zubac OUT, Siakam questionable. 6-game losing streak. This is the safest ML on the board. Spread -12.5 is also coverable.' },
+        id: 'nba-8', league: 'nba', time: '9:00 PM ET',
+        away: { name: 'Lakers', abbr: 'LAL', record: '37-24', city: 'Los Angeles' },
+        home: { name: 'Nuggets', abbr: 'DEN', record: '38-24', city: 'Denver' },
+        spread: { team: 'DEN', value: -5, odds: -110 },
+        overUnder: { total: 228, overOdds: -110, underOdds: -110 },
+        moneyline: { away: +180, home: -220 },
+        confidence: { awayML: 35, homeML: 65, spread: 55, over: 52, under: 48 },
+        pick: { team: 'DEN', type: 'ML', reason: 'Denver at home in the altitude is always tough. Nearly identical records (38-24 vs 37-24). Nuggets have the altitude advantage and Jokic factor. LAL competitive but DEN should win at home.' },
         injuries: [
-            { icon: '\ud83d\udea8', text: 'IND: Haliburton OUT for season (torn Achilles)' },
-            { icon: '\ud83d\udd34', text: 'IND: Zubac OUT; Siakam, Nembhard questionable' },
-            { icon: '\ud83d\udcc9', text: 'IND 15-46, worst in East, 6-game losing streak' },
+            { icon: '\ud83c\udfd4\ufe0f', text: 'DEN: Mile-high altitude advantage at home' },
+            { icon: '\ud83d\udcca', text: 'DEN 38-24 vs LAL 37-24 \u2014 near-identical records' },
+            { icon: '\u2b50', text: 'Jokic vs LeBron/AD \u2014 premium matchup' },
         ]
     },
     {
-        id: 'nba-7', league: 'nba', time: '10:00 PM ET',
-        away: { name: 'Rockets', abbr: 'HOU', record: '37-22', city: 'Houston' },
-        home: { name: 'Warriors', abbr: 'GSW', record: '31-29', city: 'Golden State' },
-        spread: { team: 'HOU', value: -5.5, odds: -110 },
-        overUnder: { total: 223, overOdds: -110, underOdds: -110 },
-        moneyline: { away: -220, home: +180 },
-        confidence: { awayML: 72, homeML: 28, spread: 58, over: 48, under: 52 },
-        pick: { team: 'HOU', type: 'ML', reason: 'Houston 37-22, 4-1 in last 5. Warriors without Curry (knee, out til ~3/13) and Butler (ACL). GSW is 8-13 without Curry. Houston should control this game.' },
+        id: 'nba-9', league: 'nba', time: '10:00 PM ET',
+        away: { name: 'Pelicans', abbr: 'NOP', record: '19-44', city: 'New Orleans' },
+        home: { name: 'Kings', abbr: 'SAC', record: '14-49', city: 'Sacramento' },
+        spread: { team: 'NOP', value: -4.5, odds: -110 },
+        overUnder: { total: 230, overOdds: -110, underOdds: -110 },
+        moneyline: { away: -190, home: +160 },
+        confidence: { awayML: 62, homeML: 38, spread: 55, over: 55, under: 45 },
+        pick: { team: 'NOP', type: 'ML', reason: 'Sacramento is the worst team in the NBA at 14-49. New Orleans is bad at 19-44 but clearly better. NOP ML is safer. OVER 230 leans yes \u2014 both teams play loose with no defensive urgency.' },
         injuries: [
-            { icon: '\ud83d\udea8', text: 'GSW: Steph Curry OUT (knee, return ~Mar 13)' },
-            { icon: '\ud83d\udd34', text: 'GSW: Jimmy Butler OUT for season (ACL)' },
-            { icon: '\ud83d\udcca', text: 'HOU 4-1 in L5 | GSW 8-13 without Curry' },
-        ]
-    },
-    {
-        id: 'nba-8', league: 'nba', time: '10:00 PM ET',
-        away: { name: 'Magic', abbr: 'ORL', record: '31-27', city: 'Orlando' },
-        home: { name: 'Mavericks', abbr: 'DAL', record: '33-28', city: 'Dallas' },
-        spread: { team: 'DAL', value: -3.5, odds: -110 },
-        overUnder: { total: 216, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +145, home: -170 },
-        confidence: { awayML: 38, homeML: 62, spread: 55, over: 45, under: 55 },
-        pick: { team: 'DAL', type: 'ML', reason: 'Dallas at home with Luka is favored. Orlando is a solid defensive team but inconsistent on the road. UNDER 216 \u2014 both defenses can slow the pace.' },
-        injuries: [
-            { icon: '\ud83d\udcca', text: 'DAL at home \u2014 strong with Luka' },
-            { icon: '\ud83d\udfe2', text: 'ORL: Strong defense, inconsistent offense' },
+            { icon: '\ud83d\udcc9', text: 'SAC 14-49 \u2014 worst record in the NBA' },
+            { icon: '\u2b07\ufe0f', text: 'NOP 19-44 \u2014 bad but better than SAC' },
+            { icon: '\ud83d\udcca', text: 'Tank Bowl #2 \u2014 both teams playing for lottery' },
         ]
     },
 
-    // ===== NHL GAMES =====
+    // ===== NHL GAMES (8) =====
     {
         id: 'nhl-1', league: 'nhl', time: '7:00 PM ET',
-        away: { name: 'Golden Knights', abbr: 'VGK', record: '33-22-6', city: 'Vegas' },
-        home: { name: 'Red Wings', abbr: 'DET', record: '30-24-7', city: 'Detroit' },
-        spread: { team: 'DET', value: -1.5, odds: +185 },
-        overUnder: { total: 6, overOdds: -105, underOdds: -115 },
-        moneyline: { away: +115, home: -136 },
-        confidence: { awayML: 42, homeML: 58, spread: 35, over: 48, under: 52 },
-        pick: { team: 'DET', type: 'ML', reason: 'Detroit is a slight home favorite. Both playoff-bound. DET at home with a small edge, but VGK is always dangerous. Lean DET ML, skip the puck line.' },
+        away: { name: 'Maple Leafs', abbr: 'TOR', record: '34-20-6', city: 'Toronto' },
+        home: { name: 'Rangers', abbr: 'NYR', record: '29-22-9', city: 'New York' },
+        spread: { team: 'NYR', value: -1.5, odds: +175 },
+        overUnder: { total: 6, overOdds: -110, underOdds: -110 },
+        moneyline: { away: +110, home: -130 },
+        confidence: { awayML: 45, homeML: 55, spread: 30, over: 50, under: 50 },
+        pick: { team: 'NYR', type: 'ML', reason: 'Rangers at MSG slight favorites. Toronto without Chris Tanev (season-ending surgery). NYR also missing J.T. Miller (IR, upper body). Close game \u2014 lean NYR at home but this is a toss-up. Skip puck line.' },
         injuries: [
-            { icon: '\ud83d\udcca', text: 'DET home ML -136, VGK road ML +115' },
-            { icon: '\ud83c\udfd2', text: 'Both teams fighting for playoff positioning' },
+            { icon: '\ud83d\udea8', text: 'TOR: Chris Tanev OUT rest of season (core surgery)' },
+            { icon: '\ud83d\udd34', text: 'NYR: J.T. Miller on IR (upper-body injury)' },
+            { icon: '\ud83c\udfdf\ufe0f', text: 'MSG home ice advantage for Rangers' },
         ]
     },
     {
-        id: 'nhl-2', league: 'nhl', time: '10:00 PM ET',
-        away: { name: 'Kraken', abbr: 'SEA', record: '28-27-5', city: 'Seattle' },
-        home: { name: 'Blues', abbr: 'STL', record: '27-28-7', city: 'St. Louis' },
-        spread: { team: 'SEA', value: -1.5, odds: +178 },
-        overUnder: { total: 6, overOdds: -112, underOdds: -108 },
-        moneyline: { away: -148, home: +124 },
+        id: 'nhl-2', league: 'nhl', time: '7:00 PM ET',
+        away: { name: 'Utah HC', abbr: 'UTA', record: '27-25-8', city: 'Utah' },
+        home: { name: 'Flyers', abbr: 'PHI', record: '26-27-8', city: 'Philadelphia' },
+        spread: { team: 'UTA', value: -1.5, odds: +170 },
+        overUnder: { total: 6, overOdds: -110, underOdds: -110 },
+        moneyline: { away: -125, home: +105 },
+        confidence: { awayML: 52, homeML: 48, spread: 30, over: 50, under: 50 },
+        pick: { team: 'UTA', type: 'ML', reason: 'Utah HC slight road favorites. Both mid-table teams fighting for wild card. True toss-up \u2014 skip for parlay safety.' },
+        injuries: [
+            { icon: '\ud83d\udcca', text: 'UTA 27-25-8 vs PHI 26-27-8 \u2014 evenly matched' },
+            { icon: '\ud83c\udfd2', text: 'Both fighting for wild card positioning' },
+        ]
+    },
+    {
+        id: 'nhl-3', league: 'nhl', time: '7:00 PM ET',
+        away: { name: 'Sabres', abbr: 'BUF', record: '35-19-6', city: 'Buffalo' },
+        home: { name: 'Penguins', abbr: 'PIT', record: '31-15-13', city: 'Pittsburgh' },
+        spread: { team: 'BUF', value: -1.5, odds: +165 },
+        overUnder: { total: 6, overOdds: -110, underOdds: -110 },
+        moneyline: { away: -113, home: +100 },
+        confidence: { awayML: 52, homeML: 48, spread: 35, over: 52, under: 48 },
+        pick: { team: 'BUF', type: 'ML', reason: 'Buffalo 76 pts, 2nd in Atlantic. Pittsburgh 75 pts but missing Sidney Crosby (IR, lower body, 4+ weeks). Without Crosby, BUF has the edge. Lean BUF ML.' },
+        injuries: [
+            { icon: '\ud83d\udea8', text: 'PIT: Sidney Crosby on IR (lower body, 4+ weeks)' },
+            { icon: '\ud83d\udd34', text: 'BUF: Jordan Greenway on IR (abdomen)' },
+            { icon: '\ud83d\udcca', text: 'BUF 76 pts vs PIT 75 pts \u2014 tight division race' },
+        ]
+    },
+    {
+        id: 'nhl-4', league: 'nhl', time: '7:00 PM ET',
+        away: { name: 'Panthers', abbr: 'FLA', record: '33-20-7', city: 'Florida' },
+        home: { name: 'Blue Jackets', abbr: 'CBJ', record: '30-22-8', city: 'Columbus' },
+        spread: { team: 'CBJ', value: -1.5, odds: +210 },
+        overUnder: { total: 6.5, overOdds: -100, underOdds: -140 },
+        moneyline: { away: -102, home: -118 },
+        confidence: { awayML: 48, homeML: 52, spread: 32, over: 52, under: 48 },
+        pick: { team: 'CBJ', type: 'ML', reason: 'Columbus at home slight favorite. Florida missing Barkov (IR since October) and Seth Jones (LTIR). Lean CBJ at home.' },
+        injuries: [
+            { icon: '\ud83d\udea8', text: 'FLA: Barkov (IR), Seth Jones (LTIR, season)' },
+            { icon: '\ud83d\udd34', text: 'FLA: Cole Schwindt (IR)' },
+            { icon: '\u26a0\ufe0f', text: 'CBJ: Werenski (illness), Jenner (lower body) day-to-day' },
+        ]
+    },
+    {
+        id: 'nhl-5', league: 'nhl', time: '8:00 PM ET',
+        away: { name: 'Bruins', abbr: 'BOS', record: '33-21-5', city: 'Boston' },
+        home: { name: 'Predators', abbr: 'NSH', record: '25-29-7', city: 'Nashville' },
+        spread: { team: 'BOS', value: -1.5, odds: +150 },
+        overUnder: { total: 5.5, overOdds: -110, underOdds: -110 },
+        moneyline: { away: -155, home: +130 },
+        confidence: { awayML: 62, homeML: 38, spread: 42, over: 48, under: 52 },
+        pick: { team: 'BOS', type: 'ML', reason: 'Boston 73 pts, fighting for playoffs. Nashville 57 pts, fading out of contention. Bruins road favorites. Lean BOS ML \u2014 more motivated team.' },
+        injuries: [
+            { icon: '\ud83d\udcca', text: 'BOS 73 pts, playoff contender vs NSH 57 pts' },
+            { icon: '\u2b50', text: 'Pastrnak over 1.5 pts at +110 is a popular prop' },
+            { icon: '\u2b07\ufe0f', text: 'NSH fading out of playoff picture' },
+        ]
+    },
+    {
+        id: 'nhl-6', league: 'nhl', time: '8:00 PM ET',
+        away: { name: 'Lightning', abbr: 'TBL', record: '38-16-4', city: 'Tampa Bay' },
+        home: { name: 'Jets', abbr: 'WPG', record: '30-22-8', city: 'Winnipeg' },
+        spread: { team: 'TBL', value: -1.5, odds: +138 },
+        overUnder: { total: 5.5, overOdds: -123, underOdds: +102 },
+        moneyline: { away: -177, home: +146 },
+        confidence: { awayML: 68, homeML: 32, spread: 48, over: 55, under: 45 },
+        pick: { team: 'TBL', type: 'ML', reason: '\ud83d\udd12 Tampa Bay leads the Atlantic at 80 pts and is the best team in the East. Jets missing Josh Morrissey (IR). Lightning are road favorites at -177. Strong lean TBL ML.' },
+        injuries: [
+            { icon: '\ud83c\udfc6', text: 'TBL: 1st in Atlantic Division (80 pts, 38-16-4)' },
+            { icon: '\ud83d\udea8', text: 'WPG: Josh Morrissey on IR' },
+            { icon: '\ud83d\udcca', text: 'TBL road favorite at -177 \u2014 dominant this season' },
+        ]
+    },
+    {
+        id: 'nhl-7', league: 'nhl', time: '9:00 PM ET',
+        away: { name: 'Senators', abbr: 'OTT', record: '28-24-7', city: 'Ottawa' },
+        home: { name: 'Flames', abbr: 'CGY', record: '26-27-7', city: 'Calgary' },
+        spread: { team: 'OTT', value: -1.5, odds: +165 },
+        overUnder: { total: 6, overOdds: -110, underOdds: -110 },
+        moneyline: { away: -130, home: +110 },
         confidence: { awayML: 55, homeML: 45, spread: 32, over: 50, under: 50 },
-        pick: { team: 'SEA', type: 'ML', reason: 'Seattle favored on the road. Both below .500. Slight edge to SEA but this is basically a toss-up. Skip this game for parlay safety.' },
+        pick: { team: 'OTT', type: 'ML', reason: 'Ottawa slight road favorites. Both mid-table teams. OTT has the edge in talent. Lean OTT ML but it\'s close. Low-confidence pick.' },
         injuries: [
-            { icon: '\ud83d\udcca', text: 'SEA road favorite at -148' },
-            { icon: '\ud83c\udfd2', text: 'Both teams fighting for wild card spots' },
+            { icon: '\ud83d\udcca', text: 'OTT 28-24-7 vs CGY 26-27-7 \u2014 close matchup' },
+            { icon: '\ud83c\udfd2', text: 'Both fighting for wild card positioning' },
         ]
     },
     {
-        id: 'nhl-3', league: 'nhl', time: '10:00 PM ET',
-        away: { name: 'Hurricanes', abbr: 'CAR', record: '38-16-6', city: 'Carolina' },
-        home: { name: 'Canucks', abbr: 'VAN', record: '25-25-10', city: 'Vancouver' },
-        spread: { team: 'CAR', value: -1.5, odds: -128 },
-        overUnder: { total: 6.5, overOdds: +102, underOdds: -122 },
-        moneyline: { away: -291, home: +234 },
-        confidence: { awayML: 85, homeML: 15, spread: 68, over: 52, under: 48 },
-        pick: { team: 'CAR', type: 'ML', reason: 'Carolina is #1 in the East (38-16-6, 82 pts). Vancouver is .500 and fading. The Hurricanes are dominant \u2014 this is the safest NHL pick tonight. Even -1.5 puck line at -128 is strong.' },
+        id: 'nhl-8', league: 'nhl', time: '10:30 PM ET',
+        away: { name: 'Islanders', abbr: 'NYI', record: '35-21-5', city: 'New York' },
+        home: { name: 'Kings', abbr: 'LAK', record: '27-25-8', city: 'Los Angeles' },
+        spread: { team: 'NYI', value: -1.5, odds: +155 },
+        overUnder: { total: 5.5, overOdds: -110, underOdds: -110 },
+        moneyline: { away: -145, home: +122 },
+        confidence: { awayML: 60, homeML: 40, spread: 38, over: 48, under: 52 },
+        pick: { team: 'NYI', type: 'ML', reason: 'Islanders 75 pts, solid Metro contenders. Kings missing Kevin Fiala (season-ending leg injury), Joel Armia (IR), and Kuzmenko (IR). NYI should take this on the road.' },
         injuries: [
-            { icon: '\ud83c\udfc6', text: 'CAR: 1st in Eastern Conference (82 pts)' },
-            { icon: '\u2b07\ufe0f', text: 'VAN: 25-25-10, below playoff line, fading' },
-            { icon: '\ud83d\udcca', text: 'CAR puck line -1.5 at -128 \u2014 coverable' },
+            { icon: '\ud83d\udea8', text: 'LAK: Kevin Fiala OUT for season (leg injury)' },
+            { icon: '\ud83d\udd34', text: 'LAK: Armia (IR), Kuzmenko (IR, week-to-week)' },
+            { icon: '\ud83d\udcca', text: 'NYI 75 pts vs LAK 62 pts \u2014 clear talent gap' },
+        ]
+    },
+
+    // ===== NCAAB GAMES =====
+    {
+        id: 'ncaab-1', league: 'ncaab', time: '8:00 PM ET',
+        away: { name: 'Rutgers', abbr: 'RUT', record: '11-20', city: 'Rutgers' },
+        home: { name: 'Spartans', abbr: 'MSU', record: '23-8', city: 'Michigan St.' },
+        spread: { team: 'MSU', value: -18.5, odds: -110 },
+        overUnder: { total: 142.5, overOdds: -110, underOdds: -110 },
+        moneyline: { away: +2500, home: -4500 },
+        confidence: { awayML: 2, homeML: 98, spread: 72, over: 48, under: 52 },
+        pick: { team: 'MSU', type: 'ML', reason: '\ud83d\udd12 Michigan State (23-8, ranked) at home vs Rutgers (11-20). The Spartans are a machine \u2014 -4500 ML. Even the -18.5 spread is historically coverable vs a bad Rutgers squad. LOCK.' },
+        injuries: [
+            { icon: '\ud83c\udfc6', text: 'MSU: 23-8, ranked, dominant at home' },
+            { icon: '\u2b07\ufe0f', text: 'RUT: 11-20, one of worst in Big Ten' },
+            { icon: '\ud83d\udcca', text: 'MSU -18.5 spread, -4500 ML \u2014 massive favorite' },
+        ]
+    },
+    {
+        id: 'ncaab-2', league: 'ncaab', time: '8:00 PM ET',
+        away: { name: 'Hawkeyes', abbr: 'IOWA', record: '18-13', city: 'Iowa' },
+        home: { name: 'Wolverines', abbr: 'MICH', record: '26-5', city: 'Michigan' },
+        spread: { team: 'MICH', value: -10.5, odds: -110 },
+        overUnder: { total: 155, overOdds: -110, underOdds: -110 },
+        moneyline: { away: +380, home: -500 },
+        confidence: { awayML: 18, homeML: 82, spread: 60, over: 50, under: 50 },
+        pick: { team: 'MICH', type: 'ML', reason: 'Michigan (26-5) is a top-3 team nationally and a March Madness title favorite. Iowa (18-13) is respectable but outmatched at home in Ann Arbor. MICH ML is very safe. Spread -10.5 is a lean yes.' },
+        injuries: [
+            { icon: '\ud83c\udfc6', text: 'MICH: 26-5, top-3 nationally, title contender' },
+            { icon: '\ud83d\udcca', text: 'IOWA: 18-13, solid but outmatched' },
+            { icon: '\ud83c\udfaf', text: 'Big Ten showdown on FS1 at 8 PM' },
         ]
     },
 ];
@@ -173,31 +296,32 @@ const RECOMMENDED_PARLAYS = [
     {
         name: '\ud83d\udd12 The Safe Bag', tier: 'lock', badge: 'Highest Confidence',
         legs: [
-            { team: 'Clippers ML', odds: -671, conf: 92, game: 'IND @ LAC' },
-            { team: 'Trail Blazers ML', odds: -355, conf: 88, game: 'POR @ MEM' },
-            { team: '76ers ML', odds: -418, conf: 88, game: 'UTA @ PHI' },
-            { team: 'Hurricanes ML', odds: -291, conf: 85, game: 'CAR @ VAN' },
+            { team: 'Heat ML', odds: -800, conf: 92, game: 'BKN @ MIA' },
+            { team: 'Rockets ML', odds: -410, conf: 88, game: 'GSW @ HOU' },
+            { team: 'Spartans ML', odds: -4500, conf: 98, game: 'RUT @ MSU' },
+            { team: 'Lightning ML', odds: -177, conf: 68, game: 'TBL @ WPG' },
         ],
-        rationale: 'All four picks target the most lopsided matchups. LAC faces a 15-46 Pacers squad. Portland faces a gutted Memphis. Philly hosts tanking Jazz. Carolina is #1 in the East visiting fading Vancouver.',
+        rationale: 'Heavy favorites across three leagues. Miami hosts tanking Nets. Houston faces a depleted Warriors squad. Michigan St. is a -4500 home favorite vs 11-20 Rutgers. Tampa Bay leads the East on the road.',
     },
     {
         name: '\u26a1 The Value Play', tier: 'strong', badge: 'Best Value',
         legs: [
-            { team: 'Thunder ML', odds: -180, conf: 68, game: 'OKC @ NYK' },
-            { team: 'Rockets ML', odds: -220, conf: 72, game: 'HOU @ GSW' },
-            { team: 'Hurricanes ML', odds: -291, conf: 85, game: 'CAR @ VAN' },
+            { team: 'Magic ML', odds: -360, conf: 85, game: 'DAL @ ORL' },
+            { team: 'Suns ML', odds: -600, conf: 90, game: 'CHI @ PHX' },
+            { team: 'Wolverines ML', odds: -500, conf: 82, game: 'IOWA @ MICH' },
         ],
-        rationale: 'Better payout with solid picks. OKC is the NBA\'s best team. Houston faces a depleted Warriors squad missing Curry and Butler. Carolina is the NHL lock of the night.',
+        rationale: 'Three strong favorites with better odds than the safe bag. Orlando hosts Dallas without Kyrie. Phoenix should handle Chicago easily. Michigan is a top-3 team hosting Iowa.',
     },
     {
         name: '\ud83c\udfb2 The Big Swing', tier: 'value', badge: 'High Risk / High Reward',
         legs: [
-            { team: 'Clippers -12.5', odds: -110, conf: 75, game: 'IND @ LAC' },
-            { team: 'Blazers -9.5', odds: -110, conf: 72, game: 'POR @ MEM' },
-            { team: 'Hawks ML', odds: -105, conf: 50, game: 'ATL @ MIL' },
-            { team: 'Hurricanes -1.5', odds: -128, conf: 68, game: 'CAR @ VAN' },
+            { team: 'Heat -12.5', odds: -115, conf: 70, game: 'BKN @ MIA' },
+            { team: 'Rockets -9.5', odds: -110, conf: 65, game: 'GSW @ HOU' },
+            { team: 'Spartans -18.5', odds: -110, conf: 72, game: 'RUT @ MSU' },
+            { team: 'Nuggets ML', odds: -220, conf: 65, game: 'LAL @ DEN' },
+            { team: 'Islanders ML', odds: -145, conf: 60, game: 'NYI @ LAK' },
         ],
-        rationale: 'Spreads instead of MLs on the blowouts for much better payout. The spicy leg: Atlanta vs a Bucks team with Giannis on a minutes restriction. If MIL fades late, this parlay prints.',
+        rationale: 'Spreads on the blowouts for better payout, plus two solid MLs. If MIA, HOU, and MSU dominate as expected and DEN/NYI win at home/on road, this parlay PRINTS.',
     },
 ];
 
@@ -272,11 +396,11 @@ function getOverallConfidenceTag(game) {
 
 function createGameCard(game) {
     const isNHL = game.league === 'nhl';
+    const isNCAAB = game.league === 'ncaab';
     const spreadLabel = isNHL ? 'Puck Line' : 'Spread';
     const ouLabel = isNHL ? 'O/U Goals' : 'O/U Points';
     const tag = getOverallConfidenceTag(game);
 
-    // Determine which picks are selected
     const awayMLSel = isPickSelected(game.id, 'awayML');
     const homeMLSel = isPickSelected(game.id, 'homeML');
     const spreadFavSel = isPickSelected(game.id, 'spreadFav');
@@ -284,10 +408,9 @@ function createGameCard(game) {
     const overSel = isPickSelected(game.id, 'over');
     const underSel = isPickSelected(game.id, 'under');
 
-    // Spread: derive underdog from favorite
     const favTeam = game.spread.team;
     const dogTeam = favTeam === game.away.abbr ? game.home.abbr : game.away.abbr;
-    const dogValue = -game.spread.value; // flip the sign (e.g., -4.5 -> +4.5)
+    const dogValue = -game.spread.value;
     const dogSpreadConf = 100 - game.confidence.spread;
 
     return `
@@ -297,7 +420,6 @@ function createGameCard(game) {
                 <span class="confidence-badge ${tag.cls}">${tag.label}</span>
                 <span class="game-time">${game.time}</span>
             </div>
-            
             <div class="game-matchup">
                 <div class="teams-row">
                     <div class="team">
@@ -312,7 +434,6 @@ function createGameCard(game) {
                         <div class="team-record">${game.home.record}</div>
                     </div>
                 </div>
-                
                 <div class="odds-row">
                     <div class="odds-cell">
                         <div class="odds-cell-label">${spreadLabel}</div>
@@ -328,7 +449,6 @@ function createGameCard(game) {
                     </div>
                 </div>
             </div>
-            
             <div class="intel-section">
                 <div class="intel-items">
                     ${game.injuries.map(inj => `
@@ -343,51 +463,41 @@ function createGameCard(game) {
                     </div>
                 </div>
             </div>
-            
-            <!-- PICK BUTTONS: ML / SPREAD / O-U -->
             <div class="pick-section-group">
                 <div class="pick-row-label">Moneyline</div>
                 <div class="pick-row">
-                    <button class="pick-btn ${awayMLSel ? 'selected' : ''}" 
-                            onclick="togglePick('${game.id}', 'awayML', '${game.away.abbr} ML', ${game.moneyline.away}, ${game.confidence.awayML})">
+                    <button class="pick-btn ${awayMLSel ? 'selected' : ''}" onclick="togglePick('${game.id}', 'awayML', '${game.away.abbr} ML', ${game.moneyline.away}, ${game.confidence.awayML})">
                         <div class="pick-btn-team">${game.away.abbr}</div>
                         <div class="pick-btn-odds">${formatOdds(game.moneyline.away)}</div>
                         <div class="pick-conf ${getConfidenceClass(game.confidence.awayML)}">${getConfidenceLabel(game.confidence.awayML)} ${game.confidence.awayML}%</div>
                     </button>
-                    <button class="pick-btn ${homeMLSel ? 'selected' : ''}" 
-                            onclick="togglePick('${game.id}', 'homeML', '${game.home.abbr} ML', ${game.moneyline.home}, ${game.confidence.homeML})">
+                    <button class="pick-btn ${homeMLSel ? 'selected' : ''}" onclick="togglePick('${game.id}', 'homeML', '${game.home.abbr} ML', ${game.moneyline.home}, ${game.confidence.homeML})">
                         <div class="pick-btn-team">${game.home.abbr}</div>
                         <div class="pick-btn-odds">${formatOdds(game.moneyline.home)}</div>
                         <div class="pick-conf ${getConfidenceClass(game.confidence.homeML)}">${getConfidenceLabel(game.confidence.homeML)} ${game.confidence.homeML}%</div>
                     </button>
                 </div>
-                
                 <div class="pick-row-label">Spread</div>
                 <div class="pick-row">
-                    <button class="pick-btn ${spreadFavSel ? 'selected' : ''}" 
-                            onclick="togglePick('${game.id}', 'spreadFav', '${favTeam} ${game.spread.value}', ${game.spread.odds}, ${game.confidence.spread})">
+                    <button class="pick-btn ${spreadFavSel ? 'selected' : ''}" onclick="togglePick('${game.id}', 'spreadFav', '${favTeam} ${game.spread.value}', ${game.spread.odds}, ${game.confidence.spread})">
                         <div class="pick-btn-team">${favTeam} ${game.spread.value}</div>
                         <div class="pick-btn-odds">${formatOdds(game.spread.odds)}</div>
                         <div class="pick-conf ${getConfidenceClass(game.confidence.spread)}">${getConfidenceLabel(game.confidence.spread)} ${game.confidence.spread}%</div>
                     </button>
-                    <button class="pick-btn ${spreadDogSel ? 'selected' : ''}" 
-                            onclick="togglePick('${game.id}', 'spreadDog', '${dogTeam} +${dogValue}', -110, ${dogSpreadConf})">
+                    <button class="pick-btn ${spreadDogSel ? 'selected' : ''}" onclick="togglePick('${game.id}', 'spreadDog', '${dogTeam} +${dogValue}', -110, ${dogSpreadConf})">
                         <div class="pick-btn-team">${dogTeam} +${dogValue}</div>
                         <div class="pick-btn-odds">-110</div>
                         <div class="pick-conf ${getConfidenceClass(dogSpreadConf)}">${getConfidenceLabel(dogSpreadConf)} ${dogSpreadConf}%</div>
                     </button>
                 </div>
-                
                 <div class="pick-row-label">Total ${isNHL ? 'Goals' : 'Points'}</div>
                 <div class="pick-row">
-                    <button class="pick-btn ${overSel ? 'selected' : ''}" 
-                            onclick="togglePick('${game.id}', 'over', 'O${game.overUnder.total}', ${game.overUnder.overOdds}, ${game.confidence.over})">
+                    <button class="pick-btn ${overSel ? 'selected' : ''}" onclick="togglePick('${game.id}', 'over', 'O${game.overUnder.total}', ${game.overUnder.overOdds}, ${game.confidence.over})">
                         <div class="pick-btn-team">OVER</div>
                         <div class="pick-btn-odds">${game.overUnder.total} (${formatOdds(game.overUnder.overOdds)})</div>
                         <div class="pick-conf ${getConfidenceClass(game.confidence.over)}">${getConfidenceLabel(game.confidence.over)} ${game.confidence.over}%</div>
                     </button>
-                    <button class="pick-btn ${underSel ? 'selected' : ''}" 
-                            onclick="togglePick('${game.id}', 'under', 'U${game.overUnder.total}', ${game.overUnder.underOdds}, ${game.confidence.under})">
+                    <button class="pick-btn ${underSel ? 'selected' : ''}" onclick="togglePick('${game.id}', 'under', 'U${game.overUnder.total}', ${game.overUnder.underOdds}, ${game.confidence.under})">
                         <div class="pick-btn-team">UNDER</div>
                         <div class="pick-btn-odds">${game.overUnder.total} (${formatOdds(game.overUnder.underOdds)})</div>
                         <div class="pick-conf ${getConfidenceClass(game.confidence.under)}">${getConfidenceLabel(game.confidence.under)} ${game.confidence.under}%</div>
@@ -404,7 +514,6 @@ function renderRecommendedParlays() {
     container.innerHTML = RECOMMENDED_PARLAYS.map(parlay => {
         const { combinedDecimal, payout } = calculateParlayOdds(parlay.legs.map(l => l.odds));
         const overallConf = calculateOverallConfidence(parlay.legs.map(l => l.conf));
-
         return `
             <div class="rec-card tier-${parlay.tier}">
                 <div class="rec-header">
@@ -445,33 +554,17 @@ function renderRecommendedParlays() {
 // ===== PARLAY BUILDER LOGIC =====
 function togglePick(gameId, betType, label, odds, confidence) {
     const existingIndex = selectedPicks.findIndex(p => p.gameId === gameId && p.betType === betType);
-
     if (existingIndex >= 0) {
-        // Remove pick
         selectedPicks.splice(existingIndex, 1);
     } else {
-        // For O/U, remove opposite if selected
-        if (betType === 'over') {
-            selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'under'));
-        } else if (betType === 'under') {
-            selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'over'));
-        }
-        // For ML, remove opposite ML if selected
-        if (betType === 'awayML') {
-            selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'homeML'));
-        } else if (betType === 'homeML') {
-            selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'awayML'));
-        }
-        // For Spread, remove opposite spread if selected
-        if (betType === 'spreadFav') {
-            selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'spreadDog'));
-        } else if (betType === 'spreadDog') {
-            selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'spreadFav'));
-        }
-
+        if (betType === 'over') selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'under'));
+        else if (betType === 'under') selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'over'));
+        if (betType === 'awayML') selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'homeML'));
+        else if (betType === 'homeML') selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'awayML'));
+        if (betType === 'spreadFav') selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'spreadDog'));
+        else if (betType === 'spreadDog') selectedPicks = selectedPicks.filter(p => !(p.gameId === gameId && p.betType === 'spreadFav'));
         selectedPicks.push({ gameId, betType, label, odds, confidence });
     }
-
     updateParlayUI();
     renderGames();
 }
@@ -506,7 +599,6 @@ function updateParlayUI() {
     const payoutEl = document.getElementById('payout');
     const confEl = document.getElementById('parlay-confidence');
     const confBar = document.getElementById('conf-bar-fill');
-
     if (selectedPicks.length === 0) {
         builder.classList.remove('has-picks');
         picksContainer.innerHTML = '<p class="empty-slip">Click picks below to add them to your parlay</p>';
@@ -518,10 +610,8 @@ function updateParlayUI() {
         confBar.className = 'conf-bar-fill';
         return;
     }
-
     builder.classList.add('has-picks');
     legCount.textContent = `${selectedPicks.length} leg${selectedPicks.length > 1 ? 's' : ''}`;
-
     picksContainer.innerHTML = selectedPicks.map(pick => `
         <div class="parlay-pick-chip">
             <span class="pick-conf-dot ${getConfidenceClass(pick.confidence)}"></span>
@@ -530,10 +620,8 @@ function updateParlayUI() {
             <span class="remove-pick" onclick="removePick('${pick.gameId}', '${pick.betType}')">\u2715</span>
         </div>
     `).join('');
-
     const { combinedDecimal, payout } = calculateParlayOdds(selectedPicks.map(p => p.odds));
     const overallConf = calculateOverallConfidence(selectedPicks.map(p => p.confidence));
-
     combinedOddsEl.textContent = `${combinedDecimal.toFixed(3)}x`;
     payoutEl.textContent = `$${payout.toFixed(2)}`;
     confEl.textContent = `${overallConf}%`;
@@ -562,24 +650,17 @@ const LEAGUES = [
     { id: 'all', icon: '', label: 'All Games' },
     { id: 'nba', icon: '\ud83c\udfc0', label: 'NBA' },
     { id: 'nhl', icon: '\ud83c\udfd2', label: 'NHL' },
-    { id: 'nfl', icon: '\ud83c\udfc8', label: 'NFL' },
     { id: 'ncaab', icon: '\ud83c\udfc0', label: 'NCAAB' },
+    { id: 'nfl', icon: '\ud83c\udfc8', label: 'NFL' },
     { id: 'ncaaf', icon: '\ud83c\udfc8', label: 'NCAAF' },
 ];
 
 function renderFilterBar() {
     const bar = document.getElementById('filter-bar');
     bar.innerHTML = LEAGUES.map(league => {
-        const count = league.id === 'all'
-            ? GAMES.length
-            : GAMES.filter(g => g.league === league.id).length;
+        const count = league.id === 'all' ? GAMES.length : GAMES.filter(g => g.league === league.id).length;
         const label = `${league.icon} ${league.label} (${count})`.trim();
-        return `<button class="filter-btn ${league.id === 'all' ? 'active' : ''}" 
-                        data-filter="${league.id}" 
-                        onclick="filterGames('${league.id}')"
-                        ${count === 0 && league.id !== 'all' ? 'style="opacity:0.4;"' : ''}>
-                    ${label}
-                </button>`;
+        return `<button class="filter-btn ${league.id === 'all' ? 'active' : ''}" data-filter="${league.id}" onclick="filterGames('${league.id}')" ${count === 0 && league.id !== 'all' ? 'style="opacity:0.4;"' : ''}>${label}</button>`;
     }).join('');
 }
 
