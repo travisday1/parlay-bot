@@ -304,9 +304,17 @@ function transformGames(games, picks) {
             }
         }
 
-        // Cap: spread confidence should never exceed ML confidence for the same team
-        homeSpreadConf = Math.min(homeSpreadConf, homeMLConf);
-        awaySpreadConf = Math.min(awaySpreadConf, awayMLConf);
+        // Cap: FAVORITE's spread confidence should never exceed their ML confidence
+        // (you can't be more confident of covering the spread than winning outright)
+        // But UNDERDOG's spread confidence CAN exceed their ML — getting +points makes
+        // covering more likely than winning (e.g., 10% ML but 53% to cover +15.5)
+        if (homeSpread < 0) {
+            // Home is favorite — cap home spread at home ML
+            homeSpreadConf = Math.min(homeSpreadConf, homeMLConf);
+        } else {
+            // Away is favorite — cap away spread at away ML
+            awaySpreadConf = Math.min(awaySpreadConf, awayMLConf);
+        }
 
         // Use the favorite's spread confidence as the primary "spread" confidence
         const spreadConf = homeSpread < 0 ? homeSpreadConf : awaySpreadConf;
