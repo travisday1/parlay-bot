@@ -6,7 +6,7 @@
 
 // ===== SUPABASE CLIENT =====
 const SUPABASE_URL = 'https://civkjfswgtvjxxqquxqb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdmtqZnN3Z3R2anh4cXF1eHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NjAzMTcsImV4cCI6MjA4ODMzNjMxN30.3ZB2UwBLLXjXY8KPZGAo1vLs39_rhzZ6Jt4l_MhuSwhs';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdmtqZnN3Z3R2anh4cXF1eHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NjAzMTcsImV4cCI6MjA4ODMzNjMxN30.3ZB2UwBLXjXY8KPZGAo1vLs39_rhzZ6Jt4l_MhuSwhs';
 
 // Try CDN supabase, fallback
 let sb;
@@ -91,36 +91,67 @@ async function showApp() {
 // ===== DATA LOADING FROM SUPABASE =====
 async function loadLiveData() {
     try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(23, 59, 59, 999);
+        const now = new Date();
+
+        // Use UTC date for picks/parlays (analyzer stores in UTC)
+        const utcYear = now.getUTCFullYear();
+        const utcMonth = String(now.getUTCMonth() + 1).padStart(2, '0');
+        const utcDay = String(now.getUTCDate()).padStart(2, '0');
+        const todayUTC = `${utcYear}-${utcMonth}-${utcDay}`;
+
+        // Also get local date in case picks were stored in local TZ
+        const localYear = now.getFullYear();
+        const localMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const localDay = String(now.getDate()).padStart(2, '0');
+        const todayLocal = `${localYear}-${localMonth}-${localDay}`;
+
+        // Fetch games — look from 6 hours ago to 48 hours ahead
+        const lookBack = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+        const lookAhead = new Date(now.getTime() + 48 * 60 * 60 * 1000);
 
         // Fetch games with their odds
         const { data: games, error: gamesError } = await sb
             .from('games')
             .select('*, odds(*)')
-            .gte('commence_time', today.toISOString())
-            .lte('commence_time', tomorrow.toISOString())
+            .gte('commence_time', lookBack.toISOString())
+            .lte('commence_time', lookAhead.toISOString())
             .order('commence_time', { ascending: true });
 
         if (gamesError) throw gamesError;
 
-        // Fetch daily picks for today  
-        const todayStr = today.toISOString().split('T')[0];
-        const { data: picks, error: picksError } = await sb
+        // Fetch daily picks for today (try both UTC and local dates)
+        const { data: picksUTC, error: picksError } = await sb
             .from('daily_picks')
             .select('*')
-            .eq('pick_date', todayStr);
+            .eq('pick_date', todayUTC);
 
         if (picksError) throw picksError;
 
-        // Fetch recommended parlays for today
-        const { data: parlays, error: parlaysError } = await sb
+        let picks = picksUTC;
+        if ((!picks || picks.length === 0) && todayLocal !== todayUTC) {
+            const { data: picksLocal } = await sb
+                .from('daily_picks')
+                .select('*')
+                .eq('pick_date', todayLocal);
+            if (picksLocal && picksLocal.length > 0) picks = picksLocal;
+        }
+
+        // Fetch recommended parlays for today (try both dates)
+        const { data: parlaysUTC, error: parlaysError } = await sb
             .from('recommended_parlays')
             .select('*')
-            .eq('parlay_date', todayStr);
+            .eq('parlay_date', todayUTC);
+
+        if (parlaysError) throw parlaysError;
+
+        let parlays = parlaysUTC;
+        if ((!parlays || parlays.length === 0) && todayLocal !== todayUTC) {
+            const { data: parlaysLocal } = await sb
+                .from('recommended_parlays')
+                .select('*')
+                .eq('parlay_date', todayLocal);
+            if (parlaysLocal && parlaysLocal.length > 0) parlays = parlaysLocal;
+        }
 
         if (parlaysError) throw parlaysError;
 
