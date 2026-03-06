@@ -6,6 +6,7 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { enrichGames, formatEnrichmentForPrompt } = require('./enricher');
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -46,36 +47,48 @@ async function fetchTodaysGames() {
 
 function buildAnalysisPrompt(games, sportTitle) {
     const gameLines = games.map((g, i) => {
-        const odds = g.odds?.[0]; // combined record
+        const odds = g.odds?.[0];
         if (!odds) return null;
 
-        return `
+        let block = `
 Game ${i + 1}: ${g.away_team} @ ${g.home_team}
   Time: ${new Date(g.commence_time).toLocaleString('en-US', { timeZone: 'America/New_York' })} ET
   Moneyline: ${g.away_team} ${odds.away_odds > 0 ? '+' : ''}${odds.away_odds} | ${g.home_team} ${odds.home_odds > 0 ? '+' : ''}${odds.home_odds}
   Spread: ${g.home_team} ${odds.home_point > 0 ? '+' : ''}${odds.home_point} | ${g.away_team} ${odds.away_point > 0 ? '+' : ''}${odds.away_point}
   Over/Under: ${odds.over_point} (O ${odds.over_odds > 0 ? '+' : ''}${odds.over_odds} / U ${odds.under_odds > 0 ? '+' : ''}${odds.under_odds})`;
+
+        // Append enrichment data if available
+        const enrichment = formatEnrichmentForPrompt(g);
+        if (enrichment) block += enrichment;
+
+        return block;
     }).filter(Boolean).join('\n');
 
     return `You are an elite sports betting analyst AI called "Parlay Bot". Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 
-Analyze the following ${sportTitle} games with their DraftKings odds. For EACH game, use your knowledge of:
-- Current team records and standings
-- Key injuries / player availability
-- Recent form (last 5-10 games)
-- Rest days / back-to-back situations
-- Home/away performance splits
-- Historical matchup trends
+Analyze the following ${sportTitle} games with their DraftKings odds AND enrichment data.
 
-For each game, produce a pick with a tier classification:
-- "lock" = 75%+ confidence, strong edge identified
-- "value" = 60-74% confidence, good value on the line
-- "longshot" = Below 60% confidence, but the odds offer significant value
-- "skip" = No clear edge, avoid
+For EACH game, use ALL of the following — especially the REAL-TIME DATA provided below each game:
+- The fatigue/schedule data (🔴 Fatigued teams cover the spread ~45% of the time in the NBA)
+- The injury report (missing star players can swing a line 3-5+ points)
+- The recency-weighted O/U trends (recent 5-game trends matter more than season averages)
+- Line movement signals (significant movement = sharp money activity)
+- Current team records and standings (use your training knowledge)
+- Historical matchup trends (use your training knowledge)
+
+For each game, produce:
+1. A SIDE pick (moneyline or spread) with a tier classification:
+   - "lock" = 75%+ confidence, strong edge identified
+   - "value" = 60-74% confidence, good value on the line
+   - "longshot" = Below 60% confidence, but the odds offer significant value
+   - "skip" = No clear edge, avoid
+
+2. An OVER/UNDER assessment for every game (even if the side pick is skip).
+   Factor in: team pace, recent scoring trends, injuries to key scorers, fatigue/back-to-backs, and how the posted total compares to recency-weighted averages.
 
 IMPORTANT: Be selective. Only assign "lock" to games where you have VERY HIGH confidence. Most games should be "value" or "skip".
 
-Here are today's ${sportTitle} games:
+Here are today's ${sportTitle} games with enrichment data:
 ${gameLines}
 
 Respond in VALID JSON format only. No markdown, no explanation outside the JSON.
@@ -91,7 +104,11 @@ Respond in VALID JSON format only. No markdown, no explanation outside the JSON.
       "picked_odds": -150,
       "picked_line": null,
       "confidence": 82,
-      "rationale": "2-3 sentence analysis explaining the pick, referencing specific stats/injuries/trends"
+      "rationale": "2-3 sentence analysis referencing the enrichment data (fatigue, injuries, trends)",
+      "over_confidence": 65,
+      "under_confidence": 35,
+      "ou_pick": "over|under|skip",
+      "ou_rationale": "Why Over or Under based on scoring trends, pace, fatigue, injuries to scorers"
     }
   ],
   "recommended_parlays": [
@@ -123,7 +140,8 @@ CRITICAL PARLAY RULES:
 2. "The Value Play" MUST use DIFFERENT picks than The Safe Bag. Focus on "value" tier picks (60-74% confidence) where the odds offer a better risk/reward ratio.
 3. "The Big Swing" MUST include at least one longshot pick (under 60% confidence) where the odds payout is significantly higher.
 4. NO two parlays should share the same legs. Each parlay must be a DISTINCT combination.
-5. Each parlay should have 3 legs.`;
+5. Each parlay should have 3 legs.
+6. Consider mixing SIDE picks and O/U picks within parlays for variety and correlation.`;
 }
 
 function americanToDecimal(american) {
@@ -261,7 +279,7 @@ async function runFullAnalysis() {
     let totalPicks = 0;
     const allPicksForParlays = []; // Collect all picks across sports for cross-sport parlays
 
-    // PHASE 1: Analyze each sport for individual picks
+    // PHASE 1: Analyze each sport for individual picks (with enrichment)
     for (const [sportTitle, games] of Object.entries(sportGroups)) {
         console.log(`\n🏟️ Analyzing ${sportTitle} (${games.length} games)...`);
 
@@ -275,8 +293,11 @@ async function runFullAnalysis() {
                     ? ` [batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(games.length / batchSize)}]`
                     : '';
 
+                // Enrich games with fatigue, injuries, O/U trends, line movement
+                const enrichedBatch = await enrichGames(batch);
+
                 process.stdout.write(`   🤖 Sending to Gemini${batchLabel}...`);
-                const analysis = await analyzeGames(batch, sportTitle);
+                const analysis = await analyzeGames(enrichedBatch, sportTitle);
 
                 const lockCount = (analysis.picks || []).filter(p => p.tier === 'lock').length;
                 const valueCount = (analysis.picks || []).filter(p => p.tier === 'value').length;
