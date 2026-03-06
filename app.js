@@ -299,14 +299,15 @@ function transformParlays(parlays) {
     const tierName = { 'safe': '🔒 The Safe Bag', 'value': '⚡ The Value Play', 'longshot': '🎲 The Big Swing' };
     const tierClass = { 'safe': 'lock', 'value': 'strong', 'longshot': 'value' };
 
-    // Helper: look up real confidence from GAMES array by matching team name + bet type
-    function lookupConfidence(legTeam, legOdds) {
+    // Helper: look up real confidence from GAMES array by matching team name + bet type + game
+    function lookupConfidence(legTeam, legOdds, legGame) {
         const raw = (legTeam || '').toLowerCase().trim();
+        const gameStr = (legGame || '').toLowerCase().trim();
 
         // Detect bet type from the leg label
-        const isSpread = raw.includes('spread') || raw.includes('pts') || raw.includes('+') || raw.includes('-');
-        const isOver = raw.includes('over') && !raw.includes('moneyline');
-        const isUnder = raw.includes('under') && !raw.includes('moneyline');
+        const isSpread = raw.includes('spread') || raw.includes('pts');
+        const isOver = raw.startsWith('over') || raw.includes(' over');
+        const isUnder = raw.startsWith('under') || raw.includes(' under');
         const isOUPick = isOver || isUnder;
 
         // Strip bet-type suffixes from the team name for matching
@@ -315,37 +316,80 @@ function transformParlays(parlays) {
             .replace(/[+\-]\d+(\.\d+)?/g, '')
             .trim();
 
-        for (const game of GAMES) {
-            const homeAbbr = game.home.abbr.toLowerCase();
-            const awayAbbr = game.away.abbr.toLowerCase();
-            const homeName = game.home.name.toLowerCase();
-            const awayName = game.away.name.toLowerCase();
-            const homeCity = (game.home.city || '').toLowerCase();
-            const awayCity = (game.away.city || '').toLowerCase();
+        // First, try to find the exact game using the leg.game field (e.g. "Away @ Home")
+        // This is the most reliable match since it contains both team names
+        let matchedGame = null;
+        if (gameStr) {
+            for (const game of GAMES) {
+                const homeName = game.home.name.toLowerCase();
+                const awayName = game.away.name.toLowerCase();
+                const homeCity = (game.home.city || '').toLowerCase();
+                const awayCity = (game.away.city || '').toLowerCase();
+                const homeAbbr = game.home.abbr.toLowerCase();
+                const awayAbbr = game.away.abbr.toLowerCase();
 
-            // Check if this is an O/U pick (might say "Over" with no team name)
-            if (isOUPick) {
-                // Match by game description in the leg
-                return isOver ? (game.confidence.over || 50) : (game.confidence.under || 50);
-            }
+                // Check if both teams from the game description appear in this GAMES entry
+                const homeMatch = gameStr.includes(homeName) || gameStr.includes(homeCity) || gameStr.includes(homeAbbr);
+                const awayMatch = gameStr.includes(awayName) || gameStr.includes(awayCity) || gameStr.includes(awayAbbr);
 
-            const isHome = cleanTeam.includes(homeAbbr) || cleanTeam.includes(homeName) ||
-                homeAbbr.includes(cleanTeam) || homeName.includes(cleanTeam) ||
-                (homeCity && cleanTeam.includes(homeCity));
-            const isAway = cleanTeam.includes(awayAbbr) || cleanTeam.includes(awayName) ||
-                awayAbbr.includes(cleanTeam) || awayName.includes(cleanTeam) ||
-                (awayCity && cleanTeam.includes(awayCity));
-
-            if (isHome) {
-                if (isSpread) return game.confidence.spread || game.confidence.homeML;
-                return game.confidence.homeML;
-            }
-            if (isAway) {
-                if (isSpread) return game.confidence.spread || game.confidence.awayML;
-                return game.confidence.awayML;
+                if (homeMatch && awayMatch) {
+                    matchedGame = game;
+                    break;
+                }
+                // Also try partial: "@ Kent State" or "Kent State @"
+                if (gameStr.includes(homeName) || gameStr.includes(awayName)) {
+                    matchedGame = game;
+                    break;
+                }
             }
         }
-        return null;
+
+        // If no game matched by game string, try finding by team name only
+        if (!matchedGame) {
+            for (const game of GAMES) {
+                const homeName = game.home.name.toLowerCase();
+                const awayName = game.away.name.toLowerCase();
+                const homeCity = (game.home.city || '').toLowerCase();
+                const awayCity = (game.away.city || '').toLowerCase();
+
+                if (cleanTeam && (homeName.includes(cleanTeam) || cleanTeam.includes(homeName) ||
+                    awayName.includes(cleanTeam) || cleanTeam.includes(awayName) ||
+                    (homeCity && cleanTeam.includes(homeCity)) ||
+                    (awayCity && cleanTeam.includes(awayCity)))) {
+                    matchedGame = game;
+                    break;
+                }
+            }
+        }
+
+        if (!matchedGame) return null;
+
+        // Now determine which side of the game this pick is for
+        if (isOUPick) {
+            return isOver ? (matchedGame.confidence.over || 50) : (matchedGame.confidence.under || 50);
+        }
+
+        const homeName = matchedGame.home.name.toLowerCase();
+        const homeCity = (matchedGame.home.city || '').toLowerCase();
+        const awayName = matchedGame.away.name.toLowerCase();
+        const awayCity = (matchedGame.away.city || '').toLowerCase();
+
+        const isHome = cleanTeam.includes(homeName) || homeName.includes(cleanTeam) ||
+            (homeCity && cleanTeam.includes(homeCity));
+        const isAway = cleanTeam.includes(awayName) || awayName.includes(cleanTeam) ||
+            (awayCity && cleanTeam.includes(awayCity));
+
+        if (isHome) {
+            if (isSpread) return matchedGame.confidence.spread || matchedGame.confidence.homeML;
+            return matchedGame.confidence.homeML;
+        }
+        if (isAway) {
+            if (isSpread) return matchedGame.confidence.spread || matchedGame.confidence.awayML;
+            return matchedGame.confidence.awayML;
+        }
+
+        // Fallback: return the higher confidence (the AI's pick)
+        return Math.max(matchedGame.confidence.homeML, matchedGame.confidence.awayML);
     }
 
     return parlays
@@ -356,7 +400,7 @@ function transformParlays(parlays) {
             badge: tierBadge[p.tier] || p.tier,
             legs: (p.legs || []).map(leg => {
                 const teamName = leg.picked_team || leg.team || '?';
-                const realConf = lookupConfidence(teamName, leg.odds);
+                const realConf = lookupConfidence(teamName, leg.odds, leg.game);
                 return {
                     team: teamName,
                     odds: leg.odds || -110,
