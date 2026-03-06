@@ -15,18 +15,27 @@ const supabase = createClient(
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Group games by sport for batched analysis
+const US_SPORT_KEYS = [
+    'basketball_nba',
+    'basketball_ncaab',
+    'icehockey_nhl',
+    'americanfootball_nfl',
+    'baseball_mlb',
+];
+
 async function fetchTodaysGames() {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Get games starting from now through tomorrow
+    // Get games starting from now through tomorrow — US sports only
     const { data: games, error } = await supabase
         .from('games')
         .select(`
             *,
             odds (*)
         `)
+        .in('sport_key', US_SPORT_KEYS)
         .gte('commence_time', today.toISOString())
         .lte('commence_time', tomorrow.toISOString())
         .order('commence_time', { ascending: true });
@@ -370,9 +379,15 @@ Respond in VALID JSON only:
   ]
 }`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        generationConfig: {
+            temperature: 0.3,
+            responseMimeType: 'application/json'
+        }
+    });
     const result = await model.generateContent(prompt);
-    const text = result.response.text().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const text = result.response.text();
     const parsed = JSON.parse(text);
     const parlays = parsed.recommended_parlays || [];
 
