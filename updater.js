@@ -14,9 +14,7 @@ const supabase = createClient(
 const ODDS_API_KEY = process.env.ODDS_API_KEY;
 
 // All major sports we cover (The-Odds-API sport keys)
-// maxGames: cap per-sport. Soccer uses a shared pool (SOCCER_MAX_TOTAL)
-const SOCCER_MAX_TOTAL = 10; // Top 10 international soccer games combined
-
+// maxGames: cap per-sport
 const TARGET_SPORTS = [
     // Basketball
     { key: 'basketball_nba', title: 'NBA' },
@@ -29,13 +27,8 @@ const TARGET_SPORTS = [
     { key: 'icehockey_nhl', title: 'NHL' },
     // Baseball (seasonal)
     { key: 'baseball_mlb', title: 'MLB' },
-    // Soccer (capped to SOCCER_MAX_TOTAL combined)
-    { key: 'soccer_usa_mls', title: 'MLS', group: 'soccer' },
-    { key: 'soccer_epl', title: 'EPL', group: 'soccer' },
-    { key: 'soccer_spain_la_liga', title: 'La Liga', group: 'soccer' },
-    { key: 'soccer_italy_serie_a', title: 'Serie A', group: 'soccer' },
-    { key: 'soccer_germany_bundesliga', title: 'Bundesliga', group: 'soccer' },
-    { key: 'soccer_uefa_champs_league', title: 'UCL', group: 'soccer' },
+    // Soccer (US only)
+    { key: 'soccer_usa_mls', title: 'MLS' },
     // Tennis
     { key: 'tennis_atp_french_open', title: 'ATP French Open' },
     { key: 'tennis_wta_french_open', title: 'WTA French Open' },
@@ -126,9 +119,7 @@ async function updateAllSports() {
     const allOdds = [];
     let totalGames = 0;
 
-    // Collect soccer games separately to enforce combined cap
-    const soccerPool = []; // { gameRecord, oddsRecord, commence_time }
-
+    // Collect all games
     for (const sport of TARGET_SPORTS) {
         try {
             process.stdout.write(`\n🏟️  Fetching ${sport.title} (${sport.key})...`);
@@ -141,7 +132,6 @@ async function updateAllSports() {
 
             // Apply per-sport cap (e.g., NCAA = 20)
             if (sport.maxGames && games.length > sport.maxGames) {
-                // Sort by commence_time (soonest first) and cap
                 games.sort((a, b) => new Date(a.commence_time) - new Date(b.commence_time));
                 console.log(` ✅ ${games.length} games found → capped to ${sport.maxGames}`);
                 games = games.slice(0, sport.maxGames);
@@ -151,32 +141,15 @@ async function updateAllSports() {
 
             for (const game of games) {
                 const { gameRecord, oddsRecord } = parseOdds(game, sport.title);
-
-                // Soccer goes into the shared pool for combined capping
-                if (sport.group === 'soccer') {
-                    soccerPool.push({ gameRecord, oddsRecord, commence_time: game.commence_time });
-                } else {
-                    allGames.push(gameRecord);
-                    if (oddsRecord) allOdds.push(oddsRecord);
-                    totalGames++;
-                }
+                allGames.push(gameRecord);
+                if (oddsRecord) allOdds.push(oddsRecord);
+                totalGames++;
             }
         } catch (error) {
             console.log(` ❌ Error: ${error.message}`);
         }
     }
 
-    // Apply combined soccer cap — keep top N soonest games
-    if (soccerPool.length > 0) {
-        soccerPool.sort((a, b) => new Date(a.commence_time) - new Date(b.commence_time));
-        const capped = soccerPool.slice(0, SOCCER_MAX_TOTAL);
-        console.log(`\n⚽ Soccer: ${soccerPool.length} total games → capped to top ${capped.length}`);
-        for (const entry of capped) {
-            allGames.push(entry.gameRecord);
-            if (entry.oddsRecord) allOdds.push(entry.oddsRecord);
-            totalGames++;
-        }
-    }
 
     console.log(`\n${'='.repeat(60)}`);
     console.log(`📦 Total: ${totalGames} games across all sports`);

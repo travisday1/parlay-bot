@@ -37,11 +37,6 @@ const LEAGUE_MAP = {
     'americanfootball_ncaaf': { id: 'ncaaf', icon: '🏈', label: 'NCAAF' },
     'baseball_mlb': { id: 'mlb', icon: '⚾', label: 'MLB' },
     'soccer_usa_mls': { id: 'mls', icon: '⚽', label: 'MLS' },
-    'soccer_epl': { id: 'epl', icon: '⚽', label: 'EPL' },
-    'soccer_spain_la_liga': { id: 'laliga', icon: '⚽', label: 'La Liga' },
-    'soccer_italy_serie_a': { id: 'seriea', icon: '⚽', label: 'Serie A' },
-    'soccer_germany_bundesliga': { id: 'bundesliga', icon: '⚽', label: 'Bundesliga' },
-    'soccer_uefa_champs_league': { id: 'ucl', icon: '⚽', label: 'UCL' },
 };
 
 // ===== INITIALIZATION =====
@@ -368,6 +363,9 @@ function renderGames() {
     }
     grid.innerHTML = GAMES.map(game => createGameCard(game)).join('');
 
+    // Update tier counters on confidence filter buttons
+    updateTierCounters();
+
     // Apply confidence filter after rendering
     applyConfidenceFilter();
 }
@@ -399,7 +397,7 @@ function getOverallConfidenceTag(game) {
 
 function createGameCard(game) {
     const isNHL = game.league === 'nhl';
-    const isSoccer = ['mls', 'epl', 'laliga', 'seriea', 'bundesliga', 'ucl'].includes(game.league);
+    const isSoccer = game.league === 'mls';
     const spreadLabel = isNHL ? 'Puck Line' : isSoccer ? 'Handicap' : 'Spread';
     const ouLabel = isNHL ? 'O/U Goals' : isSoccer ? 'O/U Goals' : 'O/U Points';
     const tag = getOverallConfidenceTag(game);
@@ -621,47 +619,59 @@ function calculateOverallConfidence(confidences) {
 }
 
 function updateParlayUI() {
-    const builder = document.getElementById('parlay-builder');
-    const picksContainer = document.getElementById('parlay-picks');
-    const legCount = document.getElementById('leg-count');
-    const combinedOddsEl = document.getElementById('combined-odds');
-    const payoutEl = document.getElementById('payout');
-    const confEl = document.getElementById('parlay-confidence');
-    const confBar = document.getElementById('conf-bar-fill');
+    // Sidebar elements
+    const picksContainer = document.getElementById('sidebar-picks');
+    const legCount = document.getElementById('sidebar-leg-count');
+    const combinedOddsEl = document.getElementById('sidebar-combined-odds');
+    const payoutEl = document.getElementById('sidebar-payout');
+    const confEl = document.getElementById('sidebar-confidence');
+    const confBar = document.getElementById('sidebar-conf-fill');
+    const navBadge = document.getElementById('nav-leg-badge');
+
+    // Update nav badge
+    if (navBadge) {
+        if (selectedPicks.length > 0) {
+            navBadge.style.display = 'flex';
+            navBadge.textContent = selectedPicks.length;
+        } else {
+            navBadge.style.display = 'none';
+        }
+    }
 
     if (selectedPicks.length === 0) {
-        builder.classList.remove('has-picks');
-        picksContainer.innerHTML = '<p class="empty-slip">Click picks below to add them to your parlay</p>';
-        legCount.textContent = '0 legs';
-        combinedOddsEl.textContent = '—';
-        payoutEl.textContent = '—';
-        confEl.textContent = '—';
-        confBar.style.width = '0%';
-        confBar.className = 'conf-bar-fill';
+        if (picksContainer) picksContainer.innerHTML = '<p class="empty-slip">Click picks on game cards to build your parlay</p>';
+        if (legCount) legCount.textContent = '0 legs';
+        if (combinedOddsEl) combinedOddsEl.textContent = '—';
+        if (payoutEl) payoutEl.textContent = '—';
+        if (confEl) confEl.textContent = '—';
+        if (confBar) { confBar.style.width = '0%'; confBar.className = 'conf-bar-fill'; }
+        updateSidebarTierCounts();
         return;
     }
 
-    builder.classList.add('has-picks');
-    legCount.textContent = `${selectedPicks.length} leg${selectedPicks.length > 1 ? 's' : ''}`;
+    if (legCount) legCount.textContent = `${selectedPicks.length} leg${selectedPicks.length > 1 ? 's' : ''}`;
 
-    picksContainer.innerHTML = selectedPicks.map(pick => `
-        <div class="parlay-pick-chip">
-            <span class="pick-conf-dot ${getConfidenceClass(pick.confidence)}"></span>
-            <span>${pick.label} (${formatOdds(pick.odds)})</span>
-            <span class="pick-conf-tag">${pick.confidence}%</span>
-            <span class="remove-pick" onclick="removePick('${pick.gameId}', '${pick.betType}')">✕</span>
-        </div>
-    `).join('');
+    if (picksContainer) {
+        picksContainer.innerHTML = selectedPicks.map(pick => `
+            <div class="sidebar-pick-chip">
+                <span>
+                    <span class="pick-conf-dot ${getConfidenceClass(pick.confidence)}"></span>
+                    ${pick.label} (${formatOdds(pick.odds)}) · ${pick.confidence}%
+                </span>
+                <span class="remove-pick" onclick="removePick('${pick.gameId}', '${pick.betType}')">✕</span>
+            </div>
+        `).join('');
+    }
 
     const { combinedDecimal, payout } = calculateParlayOdds(selectedPicks.map(p => p.odds));
     const overallConf = calculateOverallConfidence(selectedPicks.map(p => p.confidence));
 
-    combinedOddsEl.textContent = `${combinedDecimal.toFixed(3)}x`;
-    payoutEl.textContent = `$${payout.toFixed(2)}`;
-    confEl.textContent = `${overallConf}%`;
-    confEl.className = `stat-value ${getConfidenceClass(overallConf)}`;
-    confBar.style.width = `${overallConf}%`;
-    confBar.className = `conf-bar-fill ${getConfidenceClass(overallConf)}`;
+    if (combinedOddsEl) combinedOddsEl.textContent = `${combinedDecimal.toFixed(3)}x`;
+    if (payoutEl) payoutEl.textContent = `$${payout.toFixed(2)}`;
+    if (confEl) { confEl.textContent = `${overallConf}%`; confEl.className = `stat-value ${getConfidenceClass(overallConf)}`; }
+    if (confBar) { confBar.style.width = `${overallConf}%`; confBar.className = `conf-bar-fill ${getConfidenceClass(overallConf)}`; }
+
+    updateSidebarTierCounts();
 }
 
 // ===== PARLAY MATH =====
@@ -738,22 +748,19 @@ function applyConfidenceFilter() {
 
 // ===== PARLAY LEG MIXER =====
 function updateBuilderTotal() {
-    const locks = parseInt(document.getElementById('builder-locks')?.value || 0);
-    const leans = parseInt(document.getElementById('builder-leans')?.value || 0);
-    const tossups = parseInt(document.getElementById('builder-tossups')?.value || 0);
+    const locks = parseInt(document.getElementById('mixer-locks')?.value || 0);
+    const leans = parseInt(document.getElementById('mixer-leans')?.value || 0);
+    const tossups = parseInt(document.getElementById('mixer-tossups')?.value || 0);
     const total = locks + leans + tossups;
 
-    const countEl = document.getElementById('builder-legs-count');
-    if (countEl) countEl.textContent = total;
-
-    const btn = document.getElementById('builder-generate-btn');
+    const btn = document.getElementById('mixer-gen-btn');
     if (btn) btn.disabled = total < 2;
 }
 
 function generateMixedParlay() {
-    const locks = parseInt(document.getElementById('builder-locks')?.value || 0);
-    const leans = parseInt(document.getElementById('builder-leans')?.value || 0);
-    const tossups = parseInt(document.getElementById('builder-tossups')?.value || 0);
+    const locks = parseInt(document.getElementById('mixer-locks')?.value || 0);
+    const leans = parseInt(document.getElementById('mixer-leans')?.value || 0);
+    const tossups = parseInt(document.getElementById('mixer-tossups')?.value || 0);
     const total = locks + leans + tossups;
 
     if (total < 2) return;
@@ -783,7 +790,7 @@ function generateMixedParlay() {
     const allSelected = [...selectedLocks, ...selectedLeans, ...selectedTossups];
 
     // Build suggestion display
-    const container = document.getElementById('builder-suggestion-area');
+    const container = document.getElementById('mixer-suggestion-area');
     if (!container) return;
 
     if (allSelected.length < total) {
@@ -1090,4 +1097,185 @@ function applyCustomRange() {
     if (startDate && endDate) {
         refreshPerformance(startDate, endDate);
     }
+}
+
+// ===== SIDEBAR TOGGLE =====
+function toggleSidebar() {
+    const sidebar = document.getElementById('parlay-sidebar');
+    if (!sidebar) return;
+    sidebar.classList.toggle('open');
+
+    // Manage overlay
+    let overlay = document.getElementById('sidebar-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'sidebar-overlay';
+        overlay.className = 'sidebar-overlay';
+        overlay.onclick = toggleSidebar;
+        document.body.appendChild(overlay);
+    }
+    overlay.classList.toggle('active', sidebar.classList.contains('open'));
+}
+
+// ===== SMOOTH NAV =====
+function smoothNav(event, sectionId) {
+    event.preventDefault();
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    // Offset for sticky nav height
+    const navHeight = document.getElementById('sticky-nav')?.offsetHeight || 60;
+    const y = section.getBoundingClientRect().top + window.pageYOffset - navHeight - 10;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+
+    // Update active link
+    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+// ===== TIER COUNTERS =====
+function updateTierCounters() {
+    let lockCount = 0, leanCount = 0, tossupCount = 0;
+    GAMES.forEach(game => {
+        const tag = getOverallConfidenceTag(game);
+        if (tag.cls === 'lock') lockCount++;
+        else if (tag.cls === 'lean') leanCount++;
+        else tossupCount++;
+    });
+
+    const allEl = document.getElementById('conf-count-all');
+    const lockEl = document.getElementById('conf-count-lock');
+    const leanEl = document.getElementById('conf-count-lean');
+    const tossupEl = document.getElementById('conf-count-tossup');
+
+    if (allEl) allEl.textContent = `(${GAMES.length})`;
+    if (lockEl) lockEl.textContent = `(${lockCount})`;
+    if (leanEl) leanEl.textContent = `(${leanCount})`;
+    if (tossupEl) tossupEl.textContent = `(${tossupCount})`;
+}
+
+// ===== SIDEBAR TIER COUNTS =====
+function updateSidebarTierCounts() {
+    let locks = 0, leans = 0, tossups = 0;
+    selectedPicks.forEach(pick => {
+        const conf = pick.confidence || 0;
+        if (conf >= 75) locks++;
+        else if (conf >= 60) leans++;
+        else tossups++;
+    });
+
+    const lockEl = document.getElementById('sidebar-lock-count');
+    const leanEl = document.getElementById('sidebar-lean-count');
+    const tossupEl = document.getElementById('sidebar-tossup-count');
+
+    if (lockEl) lockEl.textContent = locks;
+    if (leanEl) leanEl.textContent = leans;
+    if (tossupEl) tossupEl.textContent = tossups;
+}
+
+// ===== PERFORMANCE TIER & VIEW TOGGLES =====
+let currentPerfTier = 'all';
+let currentPerfView = 'individual';
+
+function setPerfTier(tier) {
+    currentPerfTier = tier;
+    document.querySelectorAll('.perf-tier-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tier === tier);
+    });
+
+    // Show/hide perf cards based on tier
+    document.querySelectorAll('.perf-card').forEach(card => {
+        if (tier === 'all') {
+            card.style.display = '';
+        } else if (tier === 'lock') {
+            card.style.display = card.classList.contains('perf-card-lock') ? '' : 'none';
+        } else if (tier === 'value') {
+            card.style.display = card.classList.contains('perf-card-value') ? '' : 'none';
+        } else if (tier === 'longshot') {
+            card.style.display = card.classList.contains('perf-card-longshot') ? '' : 'none';
+        }
+    });
+
+    // Show/hide table rows based on tier
+    const tableBody = document.getElementById('perf-table-body');
+    if (tableBody) {
+        const rows = tableBody.querySelectorAll('tr');
+        rows.forEach((row, i) => {
+            if (tier === 'all') {
+                row.style.display = '';
+            } else {
+                const tierMap = ['lock', 'value', 'longshot'];
+                row.style.display = tierMap[i] === tier ? '' : 'none';
+            }
+        });
+    }
+}
+
+function setPerfView(view) {
+    currentPerfView = view;
+    document.querySelectorAll('.perf-view-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === view);
+    });
+    // Future: toggle between individual game stats and parlay-level stats
+}
+
+// ===== SAVE PARLAY (localStorage Foundation) =====
+function saveParlay() {
+    if (selectedPicks.length === 0) {
+        alert('Add picks to your parlay before saving!');
+        return;
+    }
+
+    const savedParlays = JSON.parse(localStorage.getItem('parlayBot_savedParlays') || '[]');
+    const parlayData = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        picks: selectedPicks.map(p => ({
+            label: p.label,
+            odds: p.odds,
+            confidence: p.confidence,
+            gameId: p.gameId,
+            betType: p.betType
+        })),
+        combinedOdds: calculateParlayOdds(selectedPicks.map(p => p.odds)).combinedDecimal,
+        payout: calculateParlayOdds(selectedPicks.map(p => p.odds)).payout,
+        confidence: calculateOverallConfidence(selectedPicks.map(p => p.confidence))
+    };
+
+    savedParlays.push(parlayData);
+    localStorage.setItem('parlayBot_savedParlays', JSON.stringify(savedParlays));
+
+    // Visual feedback
+    const saveBtn = document.querySelector('.sidebar-save-btn');
+    if (saveBtn) {
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = '✅ Saved!';
+        saveBtn.style.background = 'linear-gradient(135deg, #16a34a, #22c55e)';
+        setTimeout(() => {
+            saveBtn.textContent = originalText;
+            saveBtn.style.background = '';
+        }, 2000);
+    }
+}
+
+// ===== INTERSECTION OBSERVER FOR NAV ACTIVE STATE =====
+if ('IntersectionObserver' in window) {
+    const navObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.id;
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+                });
+            }
+        });
+    }, { rootMargin: '-100px 0px -60% 0px', threshold: 0 });
+
+    // Wait for DOM to be ready before observing
+    document.addEventListener('DOMContentLoaded', () => {
+        ['performance-section', 'recommended-section', 'games-section'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) navObserver.observe(el);
+        });
+    });
 }

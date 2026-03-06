@@ -63,95 +63,30 @@
             </div>
         </header>
 
+        <!-- Sticky Nav Bar -->
+        <nav id="sticky-nav" class="sticky-nav">
+            <div class="nav-links">
+                <a href="#performance-section" class="nav-link active"
+                    onclick="smoothNav(event, 'performance-section')">📈 Performance</a>
+                <a href="#recommended-section" class="nav-link" onclick="smoothNav(event, 'recommended-section')">🔥
+                    Parlays</a>
+                <a href="#games-section" class="nav-link" onclick="smoothNav(event, 'games-section')">📊 Games</a>
+            </div>
+            <button class="nav-parlay-btn" id="nav-parlay-btn" onclick="toggleSidebar()">
+                🎰 My Parlay <span id="nav-leg-badge" class="nav-badge" style="display:none;">0</span>
+            </button>
+        </nav>
+
         <!-- Main Content -->
         <main id="app">
-            <!-- Parlay Builder Bar -->
-            <section id="parlay-builder" class="parlay-builder">
-                <div class="parlay-builder-header">
-                    <div class="parlay-builder-title">
-                        <span class="parlay-icon">🎰</span>
-                        <h2>Your Parlay Slip</h2>
-                        <span id="leg-count" class="leg-count">0 legs</span>
-                    </div>
-                    <button id="clear-parlay" class="btn-clear" onclick="clearParlay()">Clear All</button>
-                </div>
-                <div id="parlay-picks" class="parlay-picks">
-                    <p class="empty-slip">Click picks below to add them to your parlay</p>
-                </div>
-                <div class="parlay-summary">
-                    <div class="parlay-stat">
-                        <span class="stat-label">Combined Odds</span>
-                        <span id="combined-odds" class="stat-value">—</span>
-                    </div>
-                    <div class="parlay-stat">
-                        <span class="stat-label">$100 Payout</span>
-                        <span id="payout" class="stat-value payout-value">—</span>
-                    </div>
-                    <div class="parlay-stat">
-                        <span class="stat-label">Parlay Confidence</span>
-                        <span id="parlay-confidence" class="stat-value">—</span>
-                    </div>
-                    <div class="parlay-stat conf-bar-wrapper">
-                        <span class="stat-label">Confidence Meter</span>
-                        <div class="conf-bar">
-                            <div id="conf-bar-fill" class="conf-bar-fill" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
-            <!-- League Filters -->
-            <div class="filter-bar" id="filter-bar"></div>
-
-            <!-- Recommended Parlays -->
-            <section id="recommended-section" class="section">
-                <div class="section-header">
-                    <h2 class="section-title">🔥 Recommended Parlays</h2>
-                    <p class="section-desc">AI-analyzed combinations ranked by confidence & value</p>
-                </div>
-                <div id="recommended-parlays" class="recommended-grid"></div>
-            </section>
-
-            <!-- Parlay Leg Mixer -->
-            <section id="builder-section" class="section">
-                <div class="section-header">
-                    <h2 class="section-title">🎰 Build Your Parlay</h2>
-                    <p class="section-desc">Choose your mix — pick how many locks, leans, and toss-ups you want</p>
-                </div>
-                <div class="parlay-builder">
-                    <div class="builder-controls">
-                        <span class="builder-label">Tier Mix</span>
-                        <div class="builder-input-group">
-                            <label>🔒 Locks</label>
-                            <input type="number" id="builder-locks" min="0" max="10" value="2"
-                                oninput="updateBuilderTotal()">
-                        </div>
-                        <div class="builder-input-group">
-                            <label>✅ Leans</label>
-                            <input type="number" id="builder-leans" min="0" max="10" value="1"
-                                oninput="updateBuilderTotal()">
-                        </div>
-                        <div class="builder-input-group">
-                            <label>⚠️ Toss-Ups</label>
-                            <input type="number" id="builder-tossups" min="0" max="10" value="0"
-                                oninput="updateBuilderTotal()">
-                        </div>
-                        <div class="builder-total">
-                            <span class="legs-count" id="builder-legs-count">3</span>
-                            <span class="legs-label">legs</span>
-                        </div>
-                        <button class="builder-generate-btn" id="builder-generate-btn" onclick="generateMixedParlay()">
-                            🎯 Generate Parlay
-                        </button>
-                    </div>
-                    <div id="builder-suggestion-area"></div>
-                </div>
-            </section>
+            <!-- Performance Tracker (Top Section) -->
             <section id="performance-section" class="section">
                 <div class="section-header">
                     <h2 class="section-title">📈 Performance Tracker</h2>
                     <p class="section-desc">Historical $100-per-bet results — see how the bot performs over time</p>
                 </div>
+                <!-- Timeframe Range -->
                 <div class="perf-range-bar">
                     <button class="perf-range-btn active" data-range="7" onclick="setPerformanceRange(7)">Last 7
                         Days</button>
@@ -167,8 +102,74 @@
                         <button class="perf-go-btn" onclick="applyCustomRange()">Go</button>
                     </div>
                 </div>
+                <!-- Tier Filter -->
+                <div class="perf-tier-filter">
+                    <button class="perf-tier-btn active" data-tier="all" onclick="setPerfTier('all')">All Tiers</button>
+                    <button class="perf-tier-btn" data-tier="lock" onclick="setPerfTier('lock')">🔒 Locks</button>
+                    <button class="perf-tier-btn" data-tier="value" onclick="setPerfTier('value')">⚡ Value
+                        Plays</button>
+                    <button class="perf-tier-btn" data-tier="longshot" onclick="setPerfTier('longshot')">🎲 Big
+                        Swings</button>
+                </div>
+                <!-- View Toggle -->
+                <div class="perf-view-toggle">
+                    <button class="perf-view-btn active" data-view="individual" onclick="setPerfView('individual')">By
+                        Individual Game</button>
+                    <button class="perf-view-btn" data-view="parlay" onclick="setPerfView('parlay')">By Parlay</button>
+                </div>
+                <!-- Performance Stats Table -->
+                <div class="perf-stats-table-wrapper">
+                    <table class="perf-stats-table">
+                        <thead>
+                            <tr>
+                                <th>Tier</th>
+                                <th>Total Wagered</th>
+                                <th>Total Payout</th>
+                                <th>Profit / Loss</th>
+                                <th>Win %</th>
+                                <th>Avg Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody id="perf-table-body">
+                            <tr>
+                                <td>🔒 Locks</td>
+                                <td id="perf-lock-wagered">—</td>
+                                <td id="perf-lock-payout">—</td>
+                                <td id="perf-lock-profit" class="perf-profit">—</td>
+                                <td id="perf-lock-winrate">—</td>
+                                <td id="perf-lock-confidence">—</td>
+                            </tr>
+                            <tr>
+                                <td>⚡ Value Plays</td>
+                                <td id="perf-value-wagered">—</td>
+                                <td id="perf-value-payout">—</td>
+                                <td id="perf-value-profit" class="perf-profit">—</td>
+                                <td id="perf-value-winrate">—</td>
+                                <td id="perf-value-confidence">—</td>
+                            </tr>
+                            <tr>
+                                <td>🎲 Big Swings</td>
+                                <td id="perf-longshot-wagered">—</td>
+                                <td id="perf-longshot-payout">—</td>
+                                <td id="perf-longshot-profit" class="perf-profit">—</td>
+                                <td id="perf-longshot-winrate">—</td>
+                                <td id="perf-longshot-confidence">—</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="perf-totals-row">
+                                <td><strong>Totals</strong></td>
+                                <td id="perf-total-wagered"><strong>—</strong></td>
+                                <td id="perf-total-payout"><strong>—</strong></td>
+                                <td id="perf-total-profit" class="perf-profit"><strong>—</strong></td>
+                                <td id="perf-total-winrate"><strong>—</strong></td>
+                                <td id="perf-total-confidence"><strong>—</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <!-- Old perf cards (simplified) -->
                 <div class="perf-cards-grid">
-                    <!-- Locks Card -->
                     <div class="perf-card perf-card-lock">
                         <div class="perf-card-header">
                             <span class="perf-card-icon">🔒</span>
@@ -201,8 +202,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Value Plays Card -->
                     <div class="perf-card perf-card-value">
                         <div class="perf-card-header">
                             <span class="perf-card-icon">💎</span>
@@ -235,8 +234,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Big Swings Card -->
                     <div class="perf-card perf-card-longshot">
                         <div class="perf-card-header">
                             <span class="perf-card-icon">🚀</span>
@@ -274,22 +271,35 @@
                     are completed!</p>
             </section>
 
+            <!-- Recommended Parlays -->
+            <section id="recommended-section" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">🔥 Recommended Parlays</h2>
+                    <p class="section-desc">AI-analyzed combinations ranked by confidence &amp; value</p>
+                </div>
+                <div id="recommended-parlays" class="recommended-grid"></div>
+            </section>
+
             <!-- Games Section -->
             <section id="games-section" class="section">
                 <div class="section-header">
                     <h2 class="section-title">📊 Today's Games Analysis</h2>
                     <p class="section-desc">Click picks to add to your parlay — ML, Spread, and Over/Under available</p>
                 </div>
+                <!-- Confidence Filter (with counters) -->
                 <div class="confidence-filter-bar" id="confidence-filter-bar">
-                    <button class="conf-filter-btn active" data-filter="all" onclick="toggleConfFilter('all')">All
-                        Games</button>
-                    <button class="conf-filter-btn" data-filter="lock" onclick="toggleConfFilter('lock')">🔒
-                        Locks</button>
-                    <button class="conf-filter-btn" data-filter="lean" onclick="toggleConfFilter('lean')">✅
-                        Leans</button>
+                    <button class="conf-filter-btn active" data-filter="all" onclick="toggleConfFilter('all')">All Games
+                        <span id="conf-count-all" class="filter-count"></span></button>
+                    <button class="conf-filter-btn" data-filter="lock" onclick="toggleConfFilter('lock')">🔒 Locks <span
+                            id="conf-count-lock" class="filter-count"></span></button>
+                    <button class="conf-filter-btn" data-filter="lean" onclick="toggleConfFilter('lean')">✅ Leans <span
+                            id="conf-count-lean" class="filter-count"></span></button>
                     <button class="conf-filter-btn" data-filter="tossup" onclick="toggleConfFilter('tossup')">⚠️
-                        Toss-Ups</button>
+                        Toss-Ups <span id="conf-count-tossup" class="filter-count"></span></button>
                 </div>
+                <!-- League Filter (below confidence) -->
+                <div class="filter-bar" id="filter-bar"></div>
+                <!-- Games Grid -->
                 <div id="games-grid" class="games-grid">
                     <div class="loading-state" id="loading-spinner">
                         <div class="spinner"></div>
@@ -298,6 +308,77 @@
                 </div>
             </section>
         </main>
+
+        <!-- Parlay Sidebar (Slide-out) -->
+        <aside id="parlay-sidebar" class="parlay-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <span>🎰</span>
+                    <h2>My Parlay</h2>
+                    <span id="sidebar-leg-count" class="leg-count">0 legs</span>
+                </div>
+                <button class="sidebar-close-btn" onclick="toggleSidebar()">✕</button>
+            </div>
+
+            <!-- Picks List -->
+            <div id="sidebar-picks" class="sidebar-picks">
+                <p class="empty-slip">Click picks on game cards to build your parlay</p>
+            </div>
+
+            <!-- Tier Summary -->
+            <div class="sidebar-tier-summary" id="sidebar-tier-summary">
+                <span class="tier-chip tier-lock">🔒 <span id="sidebar-lock-count">0</span></span>
+                <span class="tier-chip tier-lean">✅ <span id="sidebar-lean-count">0</span></span>
+                <span class="tier-chip tier-tossup">⚠️ <span id="sidebar-tossup-count">0</span></span>
+            </div>
+
+            <!-- Parlay Stats -->
+            <div class="sidebar-stats">
+                <div class="sidebar-stat">
+                    <span class="stat-label">Combined Odds</span>
+                    <span id="sidebar-combined-odds" class="stat-value">—</span>
+                </div>
+                <div class="sidebar-stat">
+                    <span class="stat-label">$100 Payout</span>
+                    <span id="sidebar-payout" class="stat-value payout-value">—</span>
+                </div>
+                <div class="sidebar-stat">
+                    <span class="stat-label">Confidence</span>
+                    <span id="sidebar-confidence" class="stat-value">—</span>
+                </div>
+                <div class="sidebar-conf-bar">
+                    <div id="sidebar-conf-fill" class="conf-bar-fill" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Leg Mixer -->
+            <div class="sidebar-mixer">
+                <h3>🎯 Quick Build</h3>
+                <div class="mixer-controls">
+                    <div class="mixer-input">
+                        <label>🔒</label>
+                        <input type="number" id="mixer-locks" min="0" max="10" value="2" oninput="updateBuilderTotal()">
+                    </div>
+                    <div class="mixer-input">
+                        <label>✅</label>
+                        <input type="number" id="mixer-leans" min="0" max="10" value="1" oninput="updateBuilderTotal()">
+                    </div>
+                    <div class="mixer-input">
+                        <label>⚠️</label>
+                        <input type="number" id="mixer-tossups" min="0" max="10" value="0"
+                            oninput="updateBuilderTotal()">
+                    </div>
+                    <button class="mixer-gen-btn" id="mixer-gen-btn" onclick="generateMixedParlay()">Generate</button>
+                </div>
+                <div id="mixer-suggestion-area"></div>
+            </div>
+
+            <!-- Actions -->
+            <div class="sidebar-actions">
+                <button class="sidebar-save-btn" onclick="saveParlay()">💾 Save Parlay</button>
+                <button class="sidebar-clear-btn" onclick="clearParlay()">🗑️ Clear All</button>
+            </div>
+        </aside>
 
         <!-- Footer -->
         <footer>
