@@ -229,13 +229,11 @@ function transformGames(games, picks) {
     // Only include games from leagues we support
     let supportedGames = games.filter(game => LEAGUE_MAP[game.sport_key]);
 
-    // NCAAB: Only show games featuring Top 25 / power conference programs
+    // NCAAB: Only show games that have been analyzed by AI (have picks)
+    // This is the platform's value — showing AI-analyzed games, not all matchups
     supportedGames = supportedGames.filter(game => {
         if (game.sport_key !== 'basketball_ncaab') return true;
-        const home = (game.home_team || '').toLowerCase();
-        const away = (game.away_team || '').toLowerCase();
-        return NCAAB_KEYWORDS.some(team => home.includes(team) || team.includes(home) ||
-            away.includes(team) || team.includes(away));
+        return picks?.some(p => p.game_id === game.game_id);
     });
     return supportedGames.map(game => {
         const leagueInfo = LEAGUE_MAP[game.sport_key] || { id: game.sport_key, icon: '🏟️', label: game.sport_title || game.sport_key };
@@ -269,13 +267,24 @@ function transformGames(games, picks) {
         let homeMLConf = Math.min(97, impliedProb(homeML) + HOME_ADVANTAGE);
         let awayMLConf = Math.max(3, impliedProb(awayML) - HOME_ADVANTAGE);
 
-        // If AI picked a team on the moneyline, blend AI confidence with implied odds
-        if (pick && (pick.pick_type === 'moneyline')) {
+        // Blend AI confidence into ML based on pick type:
+        //   - ML pick → 50/50 blend (strongest AI signal for ML)
+        //   - Spread/O/U pick → 30/70 (AI analyzed the game but focused on spread/total)
+        if (pick && pick.pick_type === 'moneyline') {
             if (pick.picked_team === game.home_team) {
-                homeMLConf = Math.round((homeMLConf + pickConf) / 2); // blend implied + AI
+                homeMLConf = Math.round(homeMLConf * 0.5 + pickConf * 0.5);
                 awayMLConf = 100 - homeMLConf;
             } else if (pick.picked_team === game.away_team) {
-                awayMLConf = Math.round((awayMLConf + pickConf) / 2);
+                awayMLConf = Math.round(awayMLConf * 0.5 + pickConf * 0.5);
+                homeMLConf = 100 - awayMLConf;
+            }
+        } else if (pick && (pick.pick_type === 'spread' || pick.pick_type === 'over' || pick.pick_type === 'under')) {
+            // AI analyzed this game — lightly blend their view into ML
+            if (pick.picked_team === game.home_team) {
+                homeMLConf = Math.round(homeMLConf * 0.7 + pickConf * 0.3);
+                awayMLConf = 100 - homeMLConf;
+            } else if (pick.picked_team === game.away_team) {
+                awayMLConf = Math.round(awayMLConf * 0.7 + pickConf * 0.3);
                 homeMLConf = 100 - awayMLConf;
             }
         }
@@ -287,8 +296,12 @@ function transformGames(games, picks) {
         //    Spread confidence is ALWAYS capped at or below the ML confidence.
 
         // First: compute the base spread confidence from ML (compressed toward 50%)
-        const homeSpreadBase = Math.round(50 + (homeMLConf - 50) * 0.35);
-        const awaySpreadBase = Math.round(50 + (awayMLConf - 50) * 0.35);
+        // Larger spreads = harder to cover = more compression toward 50%
+        const spreadSize = Math.abs(homeSpread);
+        const compression = Math.max(0.15, 0.45 - spreadSize * 0.02);
+        // e.g. -3.5 → 0.38 (close to ML), -7.5 → 0.30, -15.5 → 0.14 (near 50%)
+        const homeSpreadBase = Math.round(50 + (homeMLConf - 50) * compression);
+        const awaySpreadBase = Math.round(50 + (awayMLConf - 50) * compression);
 
         let homeSpreadConf = homeSpreadBase;
         let awaySpreadConf = awaySpreadBase;
@@ -334,8 +347,15 @@ function transformGames(games, picks) {
             overConf = 100 - pickConf;
         } else {
             // No AI O/U pick — use implied probability from the odds
-            overConf = impliedProb(overOddsVal);
-            underConf = impliedProb(underOddsVal);
+            // Standard -110/-110 gives ~52%/48% — add slight differentiation
+            // based on whether the favorite is home (home games tend toward overs)
+            const baseOver = impliedProb(overOddsVal);
+            const baseUnder = impliedProb(underOddsVal);
+            // Nudge based on juice difference (if any) to create differentiation
+            const juiceDiff = Math.abs(overOddsVal) - Math.abs(underOddsVal);
+            const nudge = Math.round(juiceDiff * 0.05); // slight adjustment from juice
+            overConf = Math.max(35, Math.min(65, baseOver + nudge));
+            underConf = Math.max(35, Math.min(65, baseUnder - nudge));
         }
 
         const gameTime = new Date(game.commence_time).toLocaleTimeString('en-US', {
@@ -373,21 +393,24 @@ function transformGames(games, picks) {
                 type: 'ML',
                 reason: 'No detailed AI analysis available for this game yet.'
             },
-            injuries: buildIntelItems(pick, game),
+            injuries: buildIntelItems(pick, game, Math.max(homeMLConf, awayMLConf)),
             tier: pick?.tier || 'skip',
         };
     });
 }
 
-function buildIntelItems(pick, game) {
+function buildIntelItems(pick, game, recalcConf) {
+    // recalcConf = the recalculated overall confidence from our model
     const items = [];
+    const conf = recalcConf || (pick?.confidence) || 50;
     if (pick) {
-        if (pick.tier === 'lock') {
-            items.push({ icon: '🔒', text: `LOCK — ${pick.confidence}% AI confidence on ${pick.picked_team}` });
-        } else if (pick.tier === 'value') {
-            items.push({ icon: '💰', text: `VALUE PLAY — ${pick.confidence}% confidence on ${pick.picked_team}` });
-        } else if (pick.tier === 'longshot') {
-            items.push({ icon: '🎲', text: `LONG SHOT — ${pick.confidence}% confidence, high payoff potential` });
+        // Use recalculated confidence for the display, matching the tag
+        if (conf >= 75) {
+            items.push({ icon: '🔒', text: `LOCK — ${conf}% AI confidence on ${pick.picked_team}` });
+        } else if (conf >= 60) {
+            items.push({ icon: '💰', text: `VALUE PLAY — ${conf}% confidence on ${pick.picked_team}` });
+        } else {
+            items.push({ icon: '🎲', text: `TOSS-UP — ${conf}% confidence on ${pick.picked_team}` });
         }
         if (pick.rationale) {
             items.push({ icon: '🎯', text: pick.rationale });
@@ -605,10 +628,12 @@ function getOverallConfidence(game) {
 }
 
 function getOverallConfidenceTag(game) {
+    // Use ONLY recalculated confidence — not the AI's raw tier label
+    // This ensures the tag always matches the displayed confidence %
     const c = getOverallConfidence(game);
-    if (game.tier === 'lock' || c >= 85) return { label: '🔒 LOCK', cls: 'lock' };
-    if (game.tier === 'value' || c >= 65) return { label: '✅ LEAN', cls: 'lean' };
-    if (game.tier === 'longshot') return { label: '🎲 LONGSHOT', cls: 'tossup' };
+    if (c >= 75) return { label: '🔒 LOCK', cls: 'lock' };
+    if (c >= 60) return { label: '✅ LEAN', cls: 'lean' };
+    if (c >= 50) return { label: '👍 LEAN', cls: 'lean' };
     return { label: '⚠️ TOSS-UP', cls: 'tossup' };
 }
 
