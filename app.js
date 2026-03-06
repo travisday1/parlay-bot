@@ -299,18 +299,44 @@ function transformParlays(parlays) {
     const tierName = { 'safe': '🔒 The Safe Bag', 'value': '⚡ The Value Play', 'longshot': '🎲 The Big Swing' };
     const tierClass = { 'safe': 'lock', 'value': 'strong', 'longshot': 'value' };
 
+    // Helper: look up real confidence from GAMES array by matching team name
+    function lookupConfidence(legTeam, legOdds) {
+        for (const game of GAMES) {
+            // Match by team abbreviation or full name
+            const homeAbbr = game.home.abbr.toLowerCase();
+            const awayAbbr = game.away.abbr.toLowerCase();
+            const homeName = game.home.name.toLowerCase();
+            const awayName = game.away.name.toLowerCase();
+            const teamLower = (legTeam || '').toLowerCase().replace(/ ml$/i, '');
+
+            if (teamLower.includes(homeAbbr) || teamLower.includes(homeName) ||
+                homeAbbr.includes(teamLower) || homeName.includes(teamLower)) {
+                return game.confidence.homeML;
+            }
+            if (teamLower.includes(awayAbbr) || teamLower.includes(awayName) ||
+                awayAbbr.includes(teamLower) || awayName.includes(teamLower)) {
+                return game.confidence.awayML;
+            }
+        }
+        return null;
+    }
+
     return parlays
         .sort((a, b) => (tierOrder[a.tier] || 99) - (tierOrder[b.tier] || 99))
         .map(p => ({
             name: p.name || tierName[p.tier] || p.tier,
             tier: tierClass[p.tier] || p.tier,
             badge: tierBadge[p.tier] || p.tier,
-            legs: (p.legs || []).map(leg => ({
-                team: leg.picked_team || leg.team || '?',
-                odds: leg.odds || -110,
-                conf: leg.confidence || p.confidence || 50,
-                game: leg.game || '',
-            })),
+            legs: (p.legs || []).map(leg => {
+                const teamName = leg.picked_team || leg.team || '?';
+                const realConf = lookupConfidence(teamName, leg.odds);
+                return {
+                    team: teamName,
+                    odds: leg.odds || -110,
+                    conf: realConf !== null ? realConf : (leg.confidence || p.confidence || 50),
+                    game: leg.game || '',
+                };
+            }),
             rationale: p.rationale || 'AI-generated parlay combination.',
         }));
 }
