@@ -621,7 +621,10 @@ function createGameCard(game) {
     const favTeam = game.spread.team;
     const dogTeam = favTeam === game.away.abbr ? game.home.abbr : game.away.abbr;
     const dogValue = -game.spread.value;
-    const dogSpreadConf = 100 - game.confidence.spread;
+    // Use per-side spread confidence (independently capped at each team's ML confidence)
+    const isFavHome = favTeam === game.home.abbr;
+    const favSpreadConf = isFavHome ? game.confidence.spreadHome : game.confidence.spreadAway;
+    const dogSpreadConf = isFavHome ? game.confidence.spreadAway : game.confidence.spreadHome;
 
     return `
         <div class="game-card" data-league="${game.league}" data-id="${game.id}">
@@ -694,10 +697,10 @@ function createGameCard(game) {
                 <div class="pick-row-label">${spreadLabel}</div>
                 <div class="pick-row">
                     <button class="pick-btn ${spreadFavSel ? 'selected' : ''}" 
-                            onclick="togglePick('${game.id}', 'spreadFav', '${favTeam} ${game.spread.value}', ${game.spread.odds}, ${game.confidence.spread})">
+                            onclick="togglePick('${game.id}', 'spreadFav', '${favTeam} ${game.spread.value}', ${game.spread.odds}, ${favSpreadConf})">
                         <div class="pick-btn-team">${favTeam} ${game.spread.value}</div>
                         <div class="pick-btn-odds">${formatOdds(game.spread.odds)}</div>
-                        <div class="pick-conf ${getConfidenceClass(game.confidence.spread)}">${getConfidenceLabel(game.confidence.spread)} ${game.confidence.spread}%</div>
+                        <div class="pick-conf ${getConfidenceClass(favSpreadConf)}">${getConfidenceLabel(favSpreadConf)} ${favSpreadConf}%</div>
                     </button>
                     <button class="pick-btn ${spreadDogSel ? 'selected' : ''}" 
                             onclick="togglePick('${game.id}', 'spreadDog', '${dogTeam} +${dogValue}', -110, ${dogSpreadConf})">
