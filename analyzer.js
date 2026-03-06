@@ -250,17 +250,15 @@ async function runFullAnalysis() {
     }
 
     let totalPicks = 0;
-    let totalParlays = 0;
-    const allAnalysis = {};
+    const allPicksForParlays = []; // Collect all picks across sports for cross-sport parlays
 
+    // PHASE 1: Analyze each sport for individual picks
     for (const [sportTitle, games] of Object.entries(sportGroups)) {
         console.log(`\n🏟️ Analyzing ${sportTitle} (${games.length} games)...`);
 
         try {
-            // If there are too many games, batch them (Gemini handles ~50 games well)
             const batchSize = 25;
             let sportPicks = 0;
-            let sportParlays = 0;
 
             for (let i = 0; i < games.length; i += batchSize) {
                 const batch = games.slice(i, i + batchSize);
@@ -283,25 +281,136 @@ async function runFullAnalysis() {
                     }
                 }
 
-                const { storedPicks, storedParlays } = await storePicks(analysis, batch, sportTitle);
+                // Store picks (without parlays)
+                const picksOnly = { picks: analysis.picks || [], recommended_parlays: [] };
+                const { storedPicks } = await storePicks(picksOnly, batch, sportTitle);
                 sportPicks += storedPicks;
-                sportParlays += storedParlays;
+
+                // Collect non-skip picks for cross-sport parlay building
+                for (const pick of (analysis.picks || [])) {
+                    if (pick.tier !== 'skip') {
+                        const gameIdx = pick.game_index - 1;
+                        const game = batch[gameIdx];
+                        allPicksForParlays.push({
+                            sport: sportTitle,
+                            team: pick.picked_team,
+                            type: pick.pick_type,
+                            odds: pick.picked_odds,
+                            confidence: pick.confidence,
+                            tier: pick.tier,
+                            game: game ? `${game.away_team} @ ${game.home_team}` : '',
+                        });
+                    }
+                }
             }
 
             totalPicks += sportPicks;
-            totalParlays += sportParlays;
-            console.log(`   💾 Stored ${sportPicks} picks, ${sportParlays} parlays`);
+            console.log(`   💾 Stored ${sportPicks} picks`);
 
         } catch (error) {
             console.error(`   ❌ Error analyzing ${sportTitle}:`, error.message);
         }
     }
 
+    // PHASE 2: Build cross-sport parlays from all collected picks
+    console.log(`\n🎲 Building cross-sport recommended parlays from ${allPicksForParlays.length} picks...`);
+    let totalParlays = 0;
+
+    if (allPicksForParlays.length >= 3) {
+        try {
+            totalParlays = await buildCrossSportParlays(allPicksForParlays);
+            console.log(`   ✅ ${totalParlays} cross-sport parlays created`);
+        } catch (error) {
+            console.error(`   ❌ Error building cross-sport parlays:`, error.message);
+        }
+    } else {
+        console.log('   ⚠️ Not enough picks across sports to build parlays.');
+    }
+
     console.log(`\n${'='.repeat(60)}`);
     console.log(`🎯 Analysis complete!`);
     console.log(`   📊 ${totalPicks} picks stored across all sports`);
-    console.log(`   🎲 ${totalParlays} recommended parlays created`);
+    console.log(`   🎲 ${totalParlays} recommended cross-sport parlays created`);
     console.log(`   💾 All data saved to Supabase`);
+}
+
+// ===== CROSS-SPORT PARLAY BUILDER =====
+async function buildCrossSportParlays(allPicks) {
+    const pickSummary = allPicks.map((p, i) =>
+        `${i + 1}. [${p.sport}] ${p.team} ${p.type} @ ${p.odds > 0 ? '+' : ''}${p.odds} — ${p.confidence}% (${p.tier}) — ${p.game}`
+    ).join('\n');
+
+    const prompt = `You are the Parlay Bot. You have analyzed today's games across multiple sports and identified these picks:
+
+${pickSummary}
+
+Now build 3 recommended CROSS-SPORT parlays that MIX different sports for variety and value:
+
+1. "The Safe Bag" (tier: "safe") — Use the 3 highest-confidence picks (75%+ lock tier). Prioritize mixing sports if possible.
+2. "The Value Play" (tier: "value") — Use DIFFERENT picks than Safe Bag, targeting 60-74% confidence (value tier). Must mix at least 2 different sports.
+3. "The Big Swing" (tier: "longshot") — Include at least one longshot pick (under 60%) for higher payout. Mix sports for variety.
+
+CRITICAL RULES:
+- Each parlay should have exactly 3 legs
+- NO two parlays should share the same legs
+- Mix different sports whenever possible for variety
+- Use the exact team names and odds from the pick list above
+
+Respond in VALID JSON only:
+{
+  "recommended_parlays": [
+    {
+      "tier": "safe",
+      "name": "The Safe Bag",
+      "legs": [
+        {"picked_team": "Team ML", "odds": -200, "game": "Away @ Home"}
+      ],
+      "rationale": "Why this combination works across sports"
+    }
+  ]
+}`;
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const parsed = JSON.parse(text);
+    const parlays = parsed.recommended_parlays || [];
+
+    let stored = 0;
+    for (const parlay of parlays) {
+        const combinedOdds = calculateParlayOdds(parlay.legs);
+        const payoutOn100 = Math.round(combinedOdds * 100 * 100) / 100;
+
+        // Look up confidence for each leg from our picks
+        const legConfs = parlay.legs.map(leg => {
+            const match = allPicks.find(p =>
+                p.team.toLowerCase() === (leg.picked_team || '').toLowerCase().replace(/ ml$/i, '')
+            );
+            return match ? match.confidence : 50;
+        });
+        const avgConfidence = Math.round(legConfs.reduce((s, c) => s + c, 0) / legConfs.length);
+
+        const { error } = await supabase
+            .from('recommended_parlays')
+            .upsert({
+                parlay_date: new Date().toISOString().split('T')[0],
+                tier: parlay.tier,
+                name: parlay.name,
+                legs: parlay.legs,
+                combined_odds: combinedOdds,
+                payout_on_100: payoutOn100,
+                confidence: avgConfidence,
+                rationale: parlay.rationale
+            }, { onConflict: 'parlay_date,tier' });
+
+        if (error) {
+            console.error(`   ⚠️ Error storing parlay ${parlay.name}:`, error.message);
+        } else {
+            stored++;
+        }
+    }
+
+    return stored;
 }
 
 runFullAnalysis();
