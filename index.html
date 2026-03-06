@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parlay Bot | March 5, 2026</title>
+    <title>Parlay Bot | AI-Powered Betting Research</title>
     <meta name="description"
         content="AI-powered parlay betting assistant with game analysis, odds, and recommended parlay combinations.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -53,7 +53,7 @@
                 <div class="header-meta">
                     <div class="date-badge">
                         <span class="date-icon">📅</span>
-                        <span>Thursday, March 5, 2026</span>
+                        <span id="header-date">Loading...</span>
                     </div>
                     <div class="live-indicator">
                         <span class="live-dot"></span>
@@ -118,7 +118,12 @@
                     <h2 class="section-title">📊 Today's Games Analysis</h2>
                     <p class="section-desc">Click picks to add to your parlay — ML, Spread, and Over/Under available</p>
                 </div>
-                <div id="games-grid" class="games-grid"></div>
+                <div id="games-grid" class="games-grid">
+                    <div class="loading-state" id="loading-spinner">
+                        <div class="spinner"></div>
+                        <p>Loading live data from Supabase...</p>
+                    </div>
+                </div>
             </section>
         </main>
 
@@ -129,6 +134,7 @@
         </footer>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="app.js"></script>
 </body>
 

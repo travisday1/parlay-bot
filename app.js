@@ -1,339 +1,59 @@
-// ===== GAME DATA - MARCH 5, 2026 =====
-// Confidence: 0-100 per bet type based on research analysis
-const GAMES = [
-    // ===== NBA GAMES (9) =====
-    {
-        id: 'nba-1', league: 'nba', time: '7:00 PM ET',
-        away: { name: 'Mavericks', abbr: 'DAL', record: '21-40', city: 'Dallas' },
-        home: { name: 'Magic', abbr: 'ORL', record: '32-28', city: 'Orlando' },
-        spread: { team: 'ORL', value: -8.5, odds: -110 },
-        overUnder: { total: 228.5, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +280, home: -360 },
-        confidence: { awayML: 15, homeML: 85, spread: 62, over: 48, under: 52 },
-        pick: { team: 'ORL', type: 'ML', reason: 'Dallas is gutted: Kyrie Irving OUT (knee surgery), Dereck Lively OUT (foot surgery), Cooper Flagg questionable (midfoot). Orlando at home without Franz Wagner but still heavy favorites. ORL ML is safe. Spread -8.5 is coverable.' },
-        injuries: [
-            { icon: '\ud83d\udea8', text: 'DAL: Kyrie Irving OUT (knee surgery), Lively OUT (foot)' },
-            { icon: '\u26a0\ufe0f', text: 'DAL: Cooper Flagg questionable (midfoot sprain)' },
-            { icon: '\ud83d\udd34', text: 'ORL: Franz Wagner OUT (high ankle sprain)' },
-        ]
-    },
-    {
-        id: 'nba-2', league: 'nba', time: '7:00 PM ET',
-        away: { name: 'Jazz', abbr: 'UTA', record: '18-44', city: 'Utah' },
-        home: { name: 'Wizards', abbr: 'WAS', record: '16-45', city: 'Washington' },
-        spread: { team: 'UTA', value: -1.5, odds: -110 },
-        overUnder: { total: 228, overOdds: -110, underOdds: -110 },
-        moneyline: { away: -130, home: +110 },
-        confidence: { awayML: 55, homeML: 45, spread: 50, over: 55, under: 45 },
-        pick: { team: 'UTA', type: 'ML', reason: 'Tank Bowl. Both bottom-3 teams. Utah slight road favorites. Washington missing Anthony Davis, Alex Sarr, D\'Angelo Russell. Lean UTA but this is a genuine coin flip \u2014 SKIP for parlay safety.' },
-        injuries: [
-            { icon: '\ud83d\udd34', text: 'WAS: A. Davis, Sarr, Russell, George, Whitmore all OUT' },
-            { icon: '\ud83d\udd34', text: 'UTA: Markkanen, Kessler, Nurkic, JJJ all OUT' },
-            { icon: '\u26a0\ufe0f', text: 'Tank Bowl \u2014 both teams 18-44 and 16-45' },
-        ]
-    },
-    {
-        id: 'nba-3', league: 'nba', time: '7:30 PM ET',
-        away: { name: 'Nets', abbr: 'BKN', record: '15-46', city: 'Brooklyn' },
-        home: { name: 'Heat', abbr: 'MIA', record: '33-29', city: 'Miami' },
-        spread: { team: 'MIA', value: -12.5, odds: -115 },
-        overUnder: { total: 218, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +550, home: -800 },
-        confidence: { awayML: 8, homeML: 92, spread: 70, over: 45, under: 55 },
-        pick: { team: 'MIA', type: 'ML', reason: 'Brooklyn at 15-46 is the worst in the East. Miami at home fighting for playoffs. This is the safest NBA ML today. Even the -12.5 spread is coverable against a full-tank Nets squad.' },
-        injuries: [
-            { icon: '\ud83d\udcc9', text: 'BKN 15-46 \u2014 worst record in Eastern Conference' },
-            { icon: '\ud83d\udd25', text: 'MIA fighting for playoff positioning (33-29)' },
-            { icon: '\ud83d\udcca', text: 'MIA -12.5 spread \u2014 large but coverable vs tanking BKN' },
-        ]
-    },
-    {
-        id: 'nba-4', league: 'nba', time: '7:30 PM ET',
-        away: { name: 'Warriors', abbr: 'GSW', record: '31-30', city: 'Golden State' },
-        home: { name: 'Rockets', abbr: 'HOU', record: '38-22', city: 'Houston' },
-        spread: { team: 'HOU', value: -9.5, odds: -110 },
-        overUnder: { total: 215.5, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +320, home: -410 },
-        confidence: { awayML: 12, homeML: 88, spread: 65, over: 52, under: 48 },
-        pick: { team: 'HOU', type: 'ML', reason: 'Houston is dominant at 38-22. Warriors are decimated: Curry OUT (knee), Butler OUT (ACL, season), Porzingis OUT (illness), Moody OUT. GSW is 8-13 without Curry. Sengun & Amen Thompson questionable for HOU but depth advantage is massive.' },
-        injuries: [
-            { icon: '\ud83d\udea8', text: 'GSW: Curry OUT (knee), Butler OUT (ACL, season)' },
-            { icon: '\ud83d\udd34', text: 'GSW: Porzingis OUT (illness), Moody OUT (wrist)' },
-            { icon: '\u26a0\ufe0f', text: 'HOU: Sengun (illness), Amen Thompson (ankle) questionable' },
-        ]
-    },
-    {
-        id: 'nba-5', league: 'nba', time: '7:30 PM ET',
-        away: { name: 'Raptors', abbr: 'TOR', record: '35-26', city: 'Toronto' },
-        home: { name: 'Timberwolves', abbr: 'MIN', record: '39-23', city: 'Minnesota' },
-        spread: { team: 'MIN', value: -7, odds: -110 },
-        overUnder: { total: 218, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +230, home: -280 },
-        confidence: { awayML: 30, homeML: 70, spread: 55, over: 48, under: 52 },
-        pick: { team: 'MIN', type: 'ML', reason: 'Minnesota 39-23 and on a 4-game win streak. Toronto is solid at 35-26 but on the road without Brandon Ingram (questionable, thumb). MIN at home should handle this. Spread -7 is playable.' },
-        injuries: [
-            { icon: '\ud83d\udd25', text: 'MIN on a 4-game winning streak' },
-            { icon: '\u26a0\ufe0f', text: 'TOR: Brandon Ingram questionable (thumb sprain)' },
-            { icon: '\ud83d\udcca', text: 'MIN 39-23 at home vs TOR 35-26 on road' },
-        ]
-    },
-    {
-        id: 'nba-6', league: 'nba', time: '8:00 PM ET',
-        away: { name: 'Pistons', abbr: 'DET', record: '45-15', city: 'Detroit' },
-        home: { name: 'Spurs', abbr: 'SAS', record: '44-17', city: 'San Antonio' },
-        spread: { team: 'SAS', value: -3.5, odds: -106 },
-        overUnder: { total: 228, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +140, home: -165 },
-        confidence: { awayML: 42, homeML: 58, spread: 52, over: 55, under: 45 },
-        pick: { team: 'SAS', type: 'ML', reason: '\ud83d\udd25 GAME OF THE NIGHT. #1 East (DET 45-15) vs #2 West (SAS 44-17). Spurs have home court. Both elite teams. This is a pick-em with slight home edge. OVER 228 leans yes \u2014 both teams score efficiently.' },
-        injuries: [
-            { icon: '\ud83c\udfc6', text: 'DET: #1 in East (45-15) \u2014 best record in NBA' },
-            { icon: '\ud83c\udfc6', text: 'SAS: #2 overall (44-17) \u2014 dominant at home' },
-            { icon: '\ud83d\udd25', text: 'Marquee matchup \u2014 potential Finals preview' },
-        ]
-    },
-    {
-        id: 'nba-7', league: 'nba', time: '9:00 PM ET',
-        away: { name: 'Bulls', abbr: 'CHI', record: '25-37', city: 'Chicago' },
-        home: { name: 'Suns', abbr: 'PHX', record: '35-26', city: 'Phoenix' },
-        spread: { team: 'PHX', value: -11.5, odds: -108 },
-        overUnder: { total: 232, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +450, home: -600 },
-        confidence: { awayML: 10, homeML: 90, spread: 68, over: 52, under: 48 },
-        pick: { team: 'PHX', type: 'ML', reason: 'Phoenix 35-26 at home vs a struggling Chicago (25-37). The Suns should dominate this mismatch. Spread -11.5 is big but PHX has the firepower. Safe ML pick.' },
-        injuries: [
-            { icon: '\ud83d\udcc9', text: 'CHI 25-37 \u2014 12th in the West-equivalent' },
-            { icon: '\u2b50', text: 'PHX at home with full squad, 35-26' },
-            { icon: '\ud83d\udcca', text: 'PHX -11.5 \u2014 large spread but coverable vs CHI' },
-        ]
-    },
-    {
-        id: 'nba-8', league: 'nba', time: '9:00 PM ET',
-        away: { name: 'Lakers', abbr: 'LAL', record: '37-24', city: 'Los Angeles' },
-        home: { name: 'Nuggets', abbr: 'DEN', record: '38-24', city: 'Denver' },
-        spread: { team: 'DEN', value: -5, odds: -110 },
-        overUnder: { total: 228, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +180, home: -220 },
-        confidence: { awayML: 35, homeML: 65, spread: 55, over: 52, under: 48 },
-        pick: { team: 'DEN', type: 'ML', reason: 'Denver at home in the altitude is always tough. Nearly identical records (38-24 vs 37-24). Nuggets have the altitude advantage and Jokic factor. LAL competitive but DEN should win at home.' },
-        injuries: [
-            { icon: '\ud83c\udfd4\ufe0f', text: 'DEN: Mile-high altitude advantage at home' },
-            { icon: '\ud83d\udcca', text: 'DEN 38-24 vs LAL 37-24 \u2014 near-identical records' },
-            { icon: '\u2b50', text: 'Jokic vs LeBron/AD \u2014 premium matchup' },
-        ]
-    },
-    {
-        id: 'nba-9', league: 'nba', time: '10:00 PM ET',
-        away: { name: 'Pelicans', abbr: 'NOP', record: '19-44', city: 'New Orleans' },
-        home: { name: 'Kings', abbr: 'SAC', record: '14-49', city: 'Sacramento' },
-        spread: { team: 'NOP', value: -4.5, odds: -110 },
-        overUnder: { total: 230, overOdds: -110, underOdds: -110 },
-        moneyline: { away: -190, home: +160 },
-        confidence: { awayML: 62, homeML: 38, spread: 55, over: 55, under: 45 },
-        pick: { team: 'NOP', type: 'ML', reason: 'Sacramento is the worst team in the NBA at 14-49. New Orleans is bad at 19-44 but clearly better. NOP ML is safer. OVER 230 leans yes \u2014 both teams play loose with no defensive urgency.' },
-        injuries: [
-            { icon: '\ud83d\udcc9', text: 'SAC 14-49 \u2014 worst record in the NBA' },
-            { icon: '\u2b07\ufe0f', text: 'NOP 19-44 \u2014 bad but better than SAC' },
-            { icon: '\ud83d\udcca', text: 'Tank Bowl #2 \u2014 both teams playing for lottery' },
-        ]
-    },
+// ============================================================
+// PARLAY BOT — Dynamic Frontend (Powered by Supabase)
+// Fetches live games, odds, AI picks, and recommended parlays
+// from the Supabase database instead of hardcoded arrays.
+// ============================================================
 
-    // ===== NHL GAMES (8) =====
-    {
-        id: 'nhl-1', league: 'nhl', time: '7:00 PM ET',
-        away: { name: 'Maple Leafs', abbr: 'TOR', record: '34-20-6', city: 'Toronto' },
-        home: { name: 'Rangers', abbr: 'NYR', record: '29-22-9', city: 'New York' },
-        spread: { team: 'NYR', value: -1.5, odds: +175 },
-        overUnder: { total: 6, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +110, home: -130 },
-        confidence: { awayML: 45, homeML: 55, spread: 30, over: 50, under: 50 },
-        pick: { team: 'NYR', type: 'ML', reason: 'Rangers at MSG slight favorites. Toronto without Chris Tanev (season-ending surgery). NYR also missing J.T. Miller (IR, upper body). Close game \u2014 lean NYR at home but this is a toss-up. Skip puck line.' },
-        injuries: [
-            { icon: '\ud83d\udea8', text: 'TOR: Chris Tanev OUT rest of season (core surgery)' },
-            { icon: '\ud83d\udd34', text: 'NYR: J.T. Miller on IR (upper-body injury)' },
-            { icon: '\ud83c\udfdf\ufe0f', text: 'MSG home ice advantage for Rangers' },
-        ]
-    },
-    {
-        id: 'nhl-2', league: 'nhl', time: '7:00 PM ET',
-        away: { name: 'Utah HC', abbr: 'UTA', record: '27-25-8', city: 'Utah' },
-        home: { name: 'Flyers', abbr: 'PHI', record: '26-27-8', city: 'Philadelphia' },
-        spread: { team: 'UTA', value: -1.5, odds: +170 },
-        overUnder: { total: 6, overOdds: -110, underOdds: -110 },
-        moneyline: { away: -125, home: +105 },
-        confidence: { awayML: 52, homeML: 48, spread: 30, over: 50, under: 50 },
-        pick: { team: 'UTA', type: 'ML', reason: 'Utah HC slight road favorites. Both mid-table teams fighting for wild card. True toss-up \u2014 skip for parlay safety.' },
-        injuries: [
-            { icon: '\ud83d\udcca', text: 'UTA 27-25-8 vs PHI 26-27-8 \u2014 evenly matched' },
-            { icon: '\ud83c\udfd2', text: 'Both fighting for wild card positioning' },
-        ]
-    },
-    {
-        id: 'nhl-3', league: 'nhl', time: '7:00 PM ET',
-        away: { name: 'Sabres', abbr: 'BUF', record: '35-19-6', city: 'Buffalo' },
-        home: { name: 'Penguins', abbr: 'PIT', record: '31-15-13', city: 'Pittsburgh' },
-        spread: { team: 'BUF', value: -1.5, odds: +165 },
-        overUnder: { total: 6, overOdds: -110, underOdds: -110 },
-        moneyline: { away: -113, home: +100 },
-        confidence: { awayML: 52, homeML: 48, spread: 35, over: 52, under: 48 },
-        pick: { team: 'BUF', type: 'ML', reason: 'Buffalo 76 pts, 2nd in Atlantic. Pittsburgh 75 pts but missing Sidney Crosby (IR, lower body, 4+ weeks). Without Crosby, BUF has the edge. Lean BUF ML.' },
-        injuries: [
-            { icon: '\ud83d\udea8', text: 'PIT: Sidney Crosby on IR (lower body, 4+ weeks)' },
-            { icon: '\ud83d\udd34', text: 'BUF: Jordan Greenway on IR (abdomen)' },
-            { icon: '\ud83d\udcca', text: 'BUF 76 pts vs PIT 75 pts \u2014 tight division race' },
-        ]
-    },
-    {
-        id: 'nhl-4', league: 'nhl', time: '7:00 PM ET',
-        away: { name: 'Panthers', abbr: 'FLA', record: '33-20-7', city: 'Florida' },
-        home: { name: 'Blue Jackets', abbr: 'CBJ', record: '30-22-8', city: 'Columbus' },
-        spread: { team: 'CBJ', value: -1.5, odds: +210 },
-        overUnder: { total: 6.5, overOdds: -100, underOdds: -140 },
-        moneyline: { away: -102, home: -118 },
-        confidence: { awayML: 48, homeML: 52, spread: 32, over: 52, under: 48 },
-        pick: { team: 'CBJ', type: 'ML', reason: 'Columbus at home slight favorite. Florida missing Barkov (IR since October) and Seth Jones (LTIR). Blue Jackets have Werenski (illness, day-to-day) and Jenner (lower body, day-to-day). Lean CBJ at home.' },
-        injuries: [
-            { icon: '\ud83d\udea8', text: 'FLA: Barkov (IR), Seth Jones (LTIR, season)' },
-            { icon: '\ud83d\udd34', text: 'FLA: Cole Schwindt (IR)' },
-            { icon: '\u26a0\ufe0f', text: 'CBJ: Werenski (illness), Jenner (lower body) day-to-day' },
-        ]
-    },
-    {
-        id: 'nhl-5', league: 'nhl', time: '8:00 PM ET',
-        away: { name: 'Bruins', abbr: 'BOS', record: '33-21-5', city: 'Boston' },
-        home: { name: 'Predators', abbr: 'NSH', record: '25-29-7', city: 'Nashville' },
-        spread: { team: 'BOS', value: -1.5, odds: +150 },
-        overUnder: { total: 5.5, overOdds: -110, underOdds: -110 },
-        moneyline: { away: -155, home: +130 },
-        confidence: { awayML: 62, homeML: 38, spread: 42, over: 48, under: 52 },
-        pick: { team: 'BOS', type: 'ML', reason: 'Boston 71-73 pts, fighting for playoffs. Nashville 57 pts, fading out of contention. Bruins road favorites. Lean BOS ML \u2014 more motivated team.' },
-        injuries: [
-            { icon: '\ud83d\udcca', text: 'BOS 73 pts, playoff contender vs NSH 57 pts' },
-            { icon: '\u2b50', text: 'Pastrnak over 1.5 pts at +110 is a popular prop' },
-            { icon: '\u2b07\ufe0f', text: 'NSH fading out of playoff picture' },
-        ]
-    },
-    {
-        id: 'nhl-6', league: 'nhl', time: '8:00 PM ET',
-        away: { name: 'Lightning', abbr: 'TBL', record: '38-16-4', city: 'Tampa Bay' },
-        home: { name: 'Jets', abbr: 'WPG', record: '30-22-8', city: 'Winnipeg' },
-        spread: { team: 'TBL', value: -1.5, odds: +138 },
-        overUnder: { total: 5.5, overOdds: -123, underOdds: +102 },
-        moneyline: { away: -177, home: +146 },
-        confidence: { awayML: 68, homeML: 32, spread: 48, over: 55, under: 45 },
-        pick: { team: 'TBL', type: 'ML', reason: '\ud83d\udd12 Tampa Bay leads the Atlantic at 80 pts and is the best team in the East. Jets missing Josh Morrissey (IR). Lightning are road favorites at -177. Strong lean TBL ML.' },
-        injuries: [
-            { icon: '\ud83c\udfc6', text: 'TBL: 1st in Atlantic Division (80 pts, 38-16-4)' },
-            { icon: '\ud83d\udea8', text: 'WPG: Josh Morrissey on IR' },
-            { icon: '\ud83d\udcca', text: 'TBL road favorite at -177 \u2014 dominant this season' },
-        ]
-    },
-    {
-        id: 'nhl-7', league: 'nhl', time: '9:00 PM ET',
-        away: { name: 'Senators', abbr: 'OTT', record: '28-24-7', city: 'Ottawa' },
-        home: { name: 'Flames', abbr: 'CGY', record: '26-27-7', city: 'Calgary' },
-        spread: { team: 'OTT', value: -1.5, odds: +165 },
-        overUnder: { total: 6, overOdds: -110, underOdds: -110 },
-        moneyline: { away: -130, home: +110 },
-        confidence: { awayML: 55, homeML: 45, spread: 32, over: 50, under: 50 },
-        pick: { team: 'OTT', type: 'ML', reason: 'Ottawa slight road favorites. Both mid-table teams. OTT has the edge in talent. Lean OTT ML but it\'s close. Low-confidence pick.' },
-        injuries: [
-            { icon: '\ud83d\udcca', text: 'OTT 28-24-7 vs CGY 26-27-7 \u2014 close matchup' },
-            { icon: '\ud83c\udfd2', text: 'Both fighting for wild card positioning' },
-        ]
-    },
-    {
-        id: 'nhl-8', league: 'nhl', time: '10:30 PM ET',
-        away: { name: 'Islanders', abbr: 'NYI', record: '35-21-5', city: 'New York' },
-        home: { name: 'Kings', abbr: 'LAK', record: '27-25-8', city: 'Los Angeles' },
-        spread: { team: 'NYI', value: -1.5, odds: +155 },
-        overUnder: { total: 5.5, overOdds: -110, underOdds: -110 },
-        moneyline: { away: -145, home: +122 },
-        confidence: { awayML: 60, homeML: 40, spread: 38, over: 48, under: 52 },
-        pick: { team: 'NYI', type: 'ML', reason: 'Islanders 75 pts, solid Metro contenders. Kings missing Kevin Fiala (season-ending leg injury), Joel Armia (IR), and Kuzmenko (IR). NYI should take this on the road.' },
-        injuries: [
-            { icon: '\ud83d\udea8', text: 'LAK: Kevin Fiala OUT for season (leg injury)' },
-            { icon: '\ud83d\udd34', text: 'LAK: Armia (IR), Kuzmenko (IR, week-to-week)' },
-            { icon: '\ud83d\udcca', text: 'NYI 75 pts vs LAK 62 pts \u2014 clear talent gap' },
-        ]
-    },
+// ===== SUPABASE CLIENT =====
+const SUPABASE_URL = 'https://civkjfswgtvjxxqquxqb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdmtqZnN3Z3R2anh4cXF1eHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NjAzMTcsImV4cCI6MjA4ODMzNjMxN30.3ZB2UwBLLXjXY8KPZGAo1vLs39_rhzZ6Jt4l_MhuSwhs';
 
-    // ===== NCAAB GAMES =====
-    {
-        id: 'ncaab-1', league: 'ncaab', time: '8:00 PM ET',
-        away: { name: 'Rutgers', abbr: 'RUT', record: '11-20', city: 'Rutgers' },
-        home: { name: 'Spartans', abbr: 'MSU', record: '23-8', city: 'Michigan St.' },
-        spread: { team: 'MSU', value: -18.5, odds: -110 },
-        overUnder: { total: 142.5, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +2500, home: -4500 },
-        confidence: { awayML: 2, homeML: 98, spread: 72, over: 48, under: 52 },
-        pick: { team: 'MSU', type: 'ML', reason: '\ud83d\udd12 Michigan State (23-8, ranked) at home vs Rutgers (11-20). The Spartans are a machine \u2014 -4500 ML. Even the -18.5 spread is historically coverable vs a bad Rutgers squad. LOCK.' },
-        injuries: [
-            { icon: '\ud83c\udfc6', text: 'MSU: 23-8, ranked, dominant at home' },
-            { icon: '\u2b07\ufe0f', text: 'RUT: 11-20, one of worst in Big Ten' },
-            { icon: '\ud83d\udcca', text: 'MSU -18.5 spread, -4500 ML \u2014 massive favorite' },
-        ]
-    },
-    {
-        id: 'ncaab-2', league: 'ncaab', time: '8:00 PM ET',
-        away: { name: 'Hawkeyes', abbr: 'IOWA', record: '18-13', city: 'Iowa' },
-        home: { name: 'Wolverines', abbr: 'MICH', record: '26-5', city: 'Michigan' },
-        spread: { team: 'MICH', value: -10.5, odds: -110 },
-        overUnder: { total: 155, overOdds: -110, underOdds: -110 },
-        moneyline: { away: +380, home: -500 },
-        confidence: { awayML: 18, homeML: 82, spread: 60, over: 50, under: 50 },
-        pick: { team: 'MICH', type: 'ML', reason: 'Michigan (26-5) is a top-3 team nationally and a March Madness title favorite. Iowa (18-13) is respectable but outmatched at home in Ann Arbor. MICH ML is very safe. Spread -10.5 is a lean yes.' },
-        injuries: [
-            { icon: '\ud83c\udfc6', text: 'MICH: 26-5, top-3 nationally, title contender' },
-            { icon: '\ud83d\udcca', text: 'IOWA: 18-13, solid but outmatched' },
-            { icon: '\ud83c\udfaf', text: 'Big Ten showdown on FS1 at 8 PM' },
-        ]
-    },
-];
+// Try CDN supabase, fallback
+let sb;
+try {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch (e) {
+    console.warn('Supabase client not loaded, falling back to REST API');
+}
 
-// ===== RECOMMENDED PARLAYS =====
-const RECOMMENDED_PARLAYS = [
-    {
-        name: '\ud83d\udd12 The Safe Bag', tier: 'lock', badge: 'Highest Confidence',
-        legs: [
-            { team: 'Heat ML', odds: -800, conf: 92, game: 'BKN @ MIA' },
-            { team: 'Rockets ML', odds: -410, conf: 88, game: 'GSW @ HOU' },
-            { team: 'Spartans ML', odds: -4500, conf: 98, game: 'RUT @ MSU' },
-            { team: 'Lightning ML', odds: -177, conf: 68, game: 'TBL @ WPG' },
-        ],
-        rationale: 'Heavy favorites across three leagues. Miami hosts tanking Nets. Houston faces a depleted Warriors squad. Michigan St. is a -4500 home favorite vs 11-20 Rutgers. Tampa Bay leads the East on the road.',
-    },
-    {
-        name: '\u26a1 The Value Play', tier: 'strong', badge: 'Best Value',
-        legs: [
-            { team: 'Magic ML', odds: -360, conf: 85, game: 'DAL @ ORL' },
-            { team: 'Suns ML', odds: -600, conf: 90, game: 'CHI @ PHX' },
-            { team: 'Wolverines ML', odds: -500, conf: 82, game: 'IOWA @ MICH' },
-        ],
-        rationale: 'Three strong favorites with better odds than the safe bag. Orlando hosts Dallas without Kyrie. Phoenix should handle Chicago easily. Michigan is a top-3 team hosting Iowa.',
-    },
-    {
-        name: '\ud83c\udfb2 The Big Swing', tier: 'value', badge: 'High Risk / High Reward',
-        legs: [
-            { team: 'Heat -12.5', odds: -115, conf: 70, game: 'BKN @ MIA' },
-            { team: 'Rockets -9.5', odds: -110, conf: 65, game: 'GSW @ HOU' },
-            { team: 'Spartans -18.5', odds: -110, conf: 72, game: 'RUT @ MSU' },
-            { team: 'Nuggets ML', odds: -220, conf: 65, game: 'LAL @ DEN' },
-            { team: 'Islanders ML', odds: -145, conf: 60, game: 'NYI @ LAK' },
-        ],
-        rationale: 'Spreads on the blowouts for better payout, plus two solid MLs. If MIA, HOU, and MSU dominate as expected and DEN/NYI win at home/on road, this parlay PRINTS.',
-    },
-];
+// ===== STATE =====
+let GAMES = [];
+let RECOMMENDED_PARLAYS = [];
+let selectedPicks = [];
+let authenticated = false;
+let dataLoaded = false;
 
 // ===== PASSWORD =====
 const SITE_PASSWORD = 'parlay2026';
 
-// ===== STATE =====
-let selectedPicks = [];
-let authenticated = false;
+// ===== LEAGUE CONFIG =====
+const LEAGUE_MAP = {
+    'basketball_nba': { id: 'nba', icon: '🏀', label: 'NBA' },
+    'basketball_ncaab': { id: 'ncaab', icon: '🏀', label: 'NCAAB' },
+    'basketball_wncaab': { id: 'wncaab', icon: '🏀', label: 'WNCAAB' },
+    'icehockey_nhl': { id: 'nhl', icon: '🏒', label: 'NHL' },
+    'americanfootball_nfl': { id: 'nfl', icon: '🏈', label: 'NFL' },
+    'americanfootball_ncaaf': { id: 'ncaaf', icon: '🏈', label: 'NCAAF' },
+    'baseball_mlb': { id: 'mlb', icon: '⚾', label: 'MLB' },
+    'soccer_usa_mls': { id: 'mls', icon: '⚽', label: 'MLS' },
+    'soccer_epl': { id: 'epl', icon: '⚽', label: 'EPL' },
+    'soccer_spain_la_liga': { id: 'laliga', icon: '⚽', label: 'La Liga' },
+    'soccer_italy_serie_a': { id: 'seriea', icon: '⚽', label: 'Serie A' },
+    'soccer_germany_bundesliga': { id: 'bundesliga', icon: '⚽', label: 'Bundesliga' },
+    'soccer_uefa_champs_league': { id: 'ucl', icon: '⚽', label: 'UCL' },
+};
 
 // ===== INITIALIZATION =====
-document.addEventListener('DOMContentLoaded', () => { checkAuth(); });
+document.addEventListener('DOMContentLoaded', () => {
+    // Set dynamic date
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const dateEl = document.getElementById('header-date');
+    if (dateEl) dateEl.textContent = dateStr;
+    document.title = `Parlay Bot | ${dateStr}`;
+
+    checkAuth();
+});
 
 // ===== AUTH =====
 function checkAuth() {
@@ -356,17 +76,260 @@ function attemptLogin() {
     }
 }
 
-function showApp() {
+async function showApp() {
     document.getElementById('password-gate').style.display = 'none';
     document.getElementById('app-wrapper').style.display = 'block';
+
+    // Load data from Supabase
+    await loadLiveData();
+
     renderFilterBar();
     renderGames();
     renderRecommendedParlays();
 }
 
+// ===== DATA LOADING FROM SUPABASE =====
+async function loadLiveData() {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(23, 59, 59, 999);
+
+        // Fetch games with their odds
+        const { data: games, error: gamesError } = await sb
+            .from('games')
+            .select('*, odds(*)')
+            .gte('commence_time', today.toISOString())
+            .lte('commence_time', tomorrow.toISOString())
+            .order('commence_time', { ascending: true });
+
+        if (gamesError) throw gamesError;
+
+        // Fetch daily picks for today  
+        const todayStr = today.toISOString().split('T')[0];
+        const { data: picks, error: picksError } = await sb
+            .from('daily_picks')
+            .select('*')
+            .eq('pick_date', todayStr);
+
+        if (picksError) throw picksError;
+
+        // Fetch recommended parlays for today
+        const { data: parlays, error: parlaysError } = await sb
+            .from('recommended_parlays')
+            .select('*')
+            .eq('parlay_date', todayStr);
+
+        if (parlaysError) throw parlaysError;
+
+        // Transform data into frontend format
+        GAMES = transformGames(games, picks);
+        RECOMMENDED_PARLAYS = transformParlays(parlays);
+        dataLoaded = true;
+
+        console.log(`✅ Loaded ${GAMES.length} games, ${picks?.length || 0} picks, ${RECOMMENDED_PARLAYS.length} parlays from Supabase`);
+
+        // Remove loading spinner
+        const spinner = document.getElementById('loading-spinner');
+        if (spinner) spinner.style.display = 'none';
+
+    } catch (error) {
+        console.error('❌ Error loading data from Supabase:', error);
+        // Show error state
+        const grid = document.getElementById('games-grid');
+        if (grid) {
+            grid.innerHTML = `
+                <div class="loading-state">
+                    <p>⚠️ Unable to load live data. Please check your connection.</p>
+                    <p style="font-size: 0.8rem; opacity: 0.6;">Error: ${error.message}</p>
+                </div>
+            `;
+        }
+    }
+}
+
+function transformGames(games, picks) {
+    return games.map(game => {
+        const leagueInfo = LEAGUE_MAP[game.sport_key] || { id: game.sport_key, icon: '🏟️', label: game.sport_title || game.sport_key };
+        const odds = game.odds?.[0] || {};
+
+        // Find any pick for this game
+        const pick = picks?.find(p => p.game_id === game.game_id);
+
+        // Determine spread favorite
+        const homeSpread = odds.home_point || 0;
+        const awaySpread = odds.away_point || 0;
+        const spreadFavTeam = homeSpread < 0 ? abbreviate(game.home_team) : abbreviate(game.away_team);
+        const spreadFavValue = Math.min(homeSpread, awaySpread);
+
+        // Derive confidence from the pick
+        const pickConf = pick?.confidence || 50;
+        const homeML = odds.home_odds || -150;
+        const awayML = odds.away_odds || +130;
+        const homeIsFav = homeML < awayML;
+
+        // Distribute confidence based on who the AI picked
+        let awayMLConf = 50, homeMLConf = 50;
+        if (pick) {
+            if (pick.picked_team === game.home_team) {
+                homeMLConf = pickConf;
+                awayMLConf = 100 - pickConf;
+            } else if (pick.picked_team === game.away_team) {
+                awayMLConf = pickConf;
+                homeMLConf = 100 - pickConf;
+            } else {
+                // Pick is spread or total
+                homeMLConf = homeIsFav ? 60 : 40;
+                awayMLConf = homeIsFav ? 40 : 60;
+            }
+        } else {
+            homeMLConf = homeIsFav ? 60 : 40;
+            awayMLConf = homeIsFav ? 40 : 60;
+        }
+
+        const gameTime = new Date(game.commence_time).toLocaleTimeString('en-US', {
+            hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York'
+        }) + ' ET';
+
+        return {
+            id: game.game_id,
+            league: leagueInfo.id,
+            time: gameTime,
+            away: { name: shortName(game.away_team), abbr: abbreviate(game.away_team), record: '', city: cityName(game.away_team) },
+            home: { name: shortName(game.home_team), abbr: abbreviate(game.home_team), record: '', city: cityName(game.home_team) },
+            spread: { team: spreadFavTeam, value: spreadFavValue, odds: -110 },
+            overUnder: {
+                total: odds.over_point || 0,
+                overOdds: odds.over_odds || -110,
+                underOdds: odds.under_odds || -110
+            },
+            moneyline: { away: awayML, home: homeML },
+            confidence: {
+                awayML: awayMLConf,
+                homeML: homeMLConf,
+                spread: pick?.pick_type === 'spread' ? pickConf : 50,
+                over: pick?.pick_type === 'over' ? pickConf : 50,
+                under: pick?.pick_type === 'under' ? pickConf : 50,
+            },
+            pick: pick ? {
+                team: abbreviate(pick.picked_team),
+                type: pick.pick_type.toUpperCase(),
+                reason: pick.rationale || 'AI analysis pending.'
+            } : {
+                team: homeIsFav ? abbreviate(game.home_team) : abbreviate(game.away_team),
+                type: 'ML',
+                reason: 'No detailed AI analysis available for this game yet.'
+            },
+            injuries: buildIntelItems(pick, game),
+            tier: pick?.tier || 'skip',
+        };
+    });
+}
+
+function buildIntelItems(pick, game) {
+    const items = [];
+    if (pick) {
+        if (pick.tier === 'lock') {
+            items.push({ icon: '🔒', text: `LOCK — ${pick.confidence}% AI confidence on ${pick.picked_team}` });
+        } else if (pick.tier === 'value') {
+            items.push({ icon: '💰', text: `VALUE PLAY — ${pick.confidence}% confidence on ${pick.picked_team}` });
+        } else if (pick.tier === 'longshot') {
+            items.push({ icon: '🎲', text: `LONG SHOT — ${pick.confidence}% confidence, high payoff potential` });
+        }
+        if (pick.rationale) {
+            items.push({ icon: '🎯', text: pick.rationale });
+        }
+    } else {
+        items.push({ icon: '📊', text: `${game.away_team} @ ${game.home_team}` });
+    }
+    return items;
+}
+
+function transformParlays(parlays) {
+    if (!parlays || parlays.length === 0) return [];
+
+    const tierOrder = { 'safe': 0, 'value': 1, 'longshot': 2 };
+    const tierBadge = { 'safe': 'Highest Confidence', 'value': 'Best Value', 'longshot': 'High Risk / High Reward' };
+    const tierName = { 'safe': '🔒 The Safe Bag', 'value': '⚡ The Value Play', 'longshot': '🎲 The Big Swing' };
+    const tierClass = { 'safe': 'lock', 'value': 'strong', 'longshot': 'value' };
+
+    return parlays
+        .sort((a, b) => (tierOrder[a.tier] || 99) - (tierOrder[b.tier] || 99))
+        .map(p => ({
+            name: p.name || tierName[p.tier] || p.tier,
+            tier: tierClass[p.tier] || p.tier,
+            badge: tierBadge[p.tier] || p.tier,
+            legs: (p.legs || []).map(leg => ({
+                team: leg.picked_team || leg.team || '?',
+                odds: leg.odds || -110,
+                conf: leg.confidence || p.confidence || 50,
+                game: leg.game || '',
+            })),
+            rationale: p.rationale || 'AI-generated parlay combination.',
+        }));
+}
+
+// ===== HELPER FUNCTIONS =====
+function abbreviate(teamName) {
+    if (!teamName) return '?';
+    // Common abbreviations
+    const abbrevMap = {
+        'Boston Celtics': 'BOS', 'Brooklyn Nets': 'BKN', 'New York Knicks': 'NYK',
+        'Philadelphia 76ers': 'PHI', 'Toronto Raptors': 'TOR', 'Chicago Bulls': 'CHI',
+        'Cleveland Cavaliers': 'CLE', 'Detroit Pistons': 'DET', 'Indiana Pacers': 'IND',
+        'Milwaukee Bucks': 'MIL', 'Atlanta Hawks': 'ATL', 'Charlotte Hornets': 'CHA',
+        'Miami Heat': 'MIA', 'Orlando Magic': 'ORL', 'Washington Wizards': 'WAS',
+        'Dallas Mavericks': 'DAL', 'Houston Rockets': 'HOU', 'Memphis Grizzlies': 'MEM',
+        'New Orleans Pelicans': 'NOP', 'San Antonio Spurs': 'SAS', 'Denver Nuggets': 'DEN',
+        'Minnesota Timberwolves': 'MIN', 'Oklahoma City Thunder': 'OKC', 'Portland Trail Blazers': 'POR',
+        'Utah Jazz': 'UTA', 'Golden State Warriors': 'GSW', 'LA Clippers': 'LAC',
+        'Los Angeles Lakers': 'LAL', 'Phoenix Suns': 'PHX', 'Sacramento Kings': 'SAC',
+        // NHL
+        'Toronto Maple Leafs': 'TOR', 'New York Rangers': 'NYR', 'Boston Bruins': 'BOS',
+        'Tampa Bay Lightning': 'TBL', 'Florida Panthers': 'FLA', 'Buffalo Sabres': 'BUF',
+        'Pittsburgh Penguins': 'PIT', 'Philadelphia Flyers': 'PHI', 'Columbus Blue Jackets': 'CBJ',
+        'Nashville Predators': 'NSH', 'Winnipeg Jets': 'WPG', 'Calgary Flames': 'CGY',
+        'Edmonton Oilers': 'EDM', 'Vancouver Canucks': 'VAN', 'Colorado Avalanche': 'COL',
+        'Dallas Stars': 'DAL', 'Minnesota Wild': 'MIN', 'St Louis Blues': 'STL',
+        'Chicago Blackhawks': 'CHI', 'Detroit Red Wings': 'DET', 'Los Angeles Kings': 'LAK',
+        'Anaheim Ducks': 'ANA', 'San Jose Sharks': 'SJS', 'Seattle Kraken': 'SEA',
+        'Carolina Hurricanes': 'CAR', 'New Jersey Devils': 'NJD', 'New York Islanders': 'NYI',
+        'Washington Capitals': 'WSH', 'Montreal Canadiens': 'MTL', 'Ottawa Senators': 'OTT',
+        // Soccer
+        'Bayern Munich': 'BAY', 'Real Madrid': 'RMA', 'FC Barcelona': 'BAR',
+        'Manchester City': 'MCI', 'Manchester United': 'MUN', 'Liverpool': 'LIV',
+        'Arsenal': 'ARS', 'Chelsea': 'CHE', 'Tottenham Hotspur': 'TOT',
+        'Inter Milan': 'INT', 'AC Milan': 'MIL', 'Juventus': 'JUV',
+        'Borussia Dortmund': 'BVB', 'Atletico Madrid': 'ATM',
+    };
+    if (abbrevMap[teamName]) return abbrevMap[teamName];
+    // Fallback: take first 3 letters of last word
+    const words = teamName.split(' ');
+    return words[words.length - 1].substring(0, 3).toUpperCase();
+}
+
+function shortName(teamName) {
+    if (!teamName) return '?';
+    const words = teamName.split(' ');
+    return words[words.length - 1]; // Last word (e.g., "Celtics", "Knicks")
+}
+
+function cityName(teamName) {
+    if (!teamName) return '?';
+    const words = teamName.split(' ');
+    if (words.length <= 1) return teamName;
+    return words.slice(0, -1).join(' '); // Everything except last word
+}
+
 // ===== RENDER GAMES =====
 function renderGames() {
     const grid = document.getElementById('games-grid');
+    if (GAMES.length === 0 && dataLoaded) {
+        grid.innerHTML = '<div class="loading-state"><p>No games scheduled for today. Check back later!</p></div>';
+        return;
+    }
     grid.innerHTML = GAMES.map(game => createGameCard(game)).join('');
 }
 
@@ -377,10 +340,10 @@ function getConfidenceClass(conf) {
 }
 
 function getConfidenceLabel(conf) {
-    if (conf >= 85) return '\ud83d\udd12';
-    if (conf >= 70) return '\u2705';
-    if (conf >= 55) return '\ud83d\udc4d';
-    return '\u26a0\ufe0f';
+    if (conf >= 85) return '🔒';
+    if (conf >= 70) return '✅';
+    if (conf >= 55) return '👍';
+    return '⚠️';
 }
 
 function getOverallConfidence(game) {
@@ -389,19 +352,19 @@ function getOverallConfidence(game) {
 
 function getOverallConfidenceTag(game) {
     const c = getOverallConfidence(game);
-    if (c >= 85) return { label: '\ud83d\udd12 LOCK', cls: 'lock' };
-    if (c >= 65) return { label: '\u2705 LEAN', cls: 'lean' };
-    return { label: '\u26a0\ufe0f TOSS-UP', cls: 'tossup' };
+    if (game.tier === 'lock' || c >= 85) return { label: '🔒 LOCK', cls: 'lock' };
+    if (game.tier === 'value' || c >= 65) return { label: '✅ LEAN', cls: 'lean' };
+    if (game.tier === 'longshot') return { label: '🎲 LONGSHOT', cls: 'tossup' };
+    return { label: '⚠️ TOSS-UP', cls: 'tossup' };
 }
 
 function createGameCard(game) {
     const isNHL = game.league === 'nhl';
-    const isNCAAB = game.league === 'ncaab';
-    const spreadLabel = isNHL ? 'Puck Line' : 'Spread';
-    const ouLabel = isNHL ? 'O/U Goals' : 'O/U Points';
+    const isSoccer = ['mls', 'epl', 'laliga', 'seriea', 'bundesliga', 'ucl'].includes(game.league);
+    const spreadLabel = isNHL ? 'Puck Line' : isSoccer ? 'Handicap' : 'Spread';
+    const ouLabel = isNHL ? 'O/U Goals' : isSoccer ? 'O/U Goals' : 'O/U Points';
     const tag = getOverallConfidenceTag(game);
 
-    // Determine which picks are selected
     const awayMLSel = isPickSelected(game.id, 'awayML');
     const homeMLSel = isPickSelected(game.id, 'homeML');
     const spreadFavSel = isPickSelected(game.id, 'spreadFav');
@@ -409,10 +372,9 @@ function createGameCard(game) {
     const overSel = isPickSelected(game.id, 'over');
     const underSel = isPickSelected(game.id, 'under');
 
-    // Spread: derive underdog from favorite
     const favTeam = game.spread.team;
     const dogTeam = favTeam === game.away.abbr ? game.home.abbr : game.away.abbr;
-    const dogValue = -game.spread.value; // flip the sign
+    const dogValue = -game.spread.value;
     const dogSpreadConf = 100 - game.confidence.spread;
 
     return `
@@ -462,10 +424,6 @@ function createGameCard(game) {
                             <span>${inj.text}</span>
                         </div>
                     `).join('')}
-                    <div class="intel-item" style="margin-top: 4px; padding: 6px 10px; background: rgba(59,130,246,0.06); border-radius: 6px;">
-                        <span class="intel-icon">\ud83c\udfaf</span>
-                        <span style="color: var(--accent-blue);"><strong>Bot Pick:</strong> ${game.pick.reason}</span>
-                    </div>
                 </div>
             </div>
             
@@ -487,7 +445,7 @@ function createGameCard(game) {
                     </button>
                 </div>
                 
-                <div class="pick-row-label">Spread</div>
+                <div class="pick-row-label">${spreadLabel}</div>
                 <div class="pick-row">
                     <button class="pick-btn ${spreadFavSel ? 'selected' : ''}" 
                             onclick="togglePick('${game.id}', 'spreadFav', '${favTeam} ${game.spread.value}', ${game.spread.odds}, ${game.confidence.spread})">
@@ -503,7 +461,7 @@ function createGameCard(game) {
                     </button>
                 </div>
                 
-                <div class="pick-row-label">Total ${isNHL ? 'Goals' : 'Points'}</div>
+                <div class="pick-row-label">Total ${isNHL || isSoccer ? 'Goals' : 'Points'}</div>
                 <div class="pick-row">
                     <button class="pick-btn ${overSel ? 'selected' : ''}" 
                             onclick="togglePick('${game.id}', 'over', 'O${game.overUnder.total}', ${game.overUnder.overOdds}, ${game.confidence.over})">
@@ -526,6 +484,10 @@ function createGameCard(game) {
 // ===== RENDER RECOMMENDED PARLAYS =====
 function renderRecommendedParlays() {
     const container = document.getElementById('recommended-parlays');
+    if (RECOMMENDED_PARLAYS.length === 0) {
+        container.innerHTML = '<div class="loading-state"><p>No recommended parlays available yet. Check back soon!</p></div>';
+        return;
+    }
     container.innerHTML = RECOMMENDED_PARLAYS.map(parlay => {
         const { combinedDecimal, payout } = calculateParlayOdds(parlay.legs.map(l => l.odds));
         const overallConf = calculateOverallConfidence(parlay.legs.map(l => l.conf));
@@ -542,7 +504,7 @@ function renderRecommendedParlays() {
                             <span class="rec-leg-team">${leg.team}</span>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span class="pick-conf-inline ${getConfidenceClass(leg.conf)}">${leg.conf}%</span>
-                                <span class="rec-leg-odds">${formatOdds(leg.odds)} \u00b7 ${leg.game}</span>
+                                <span class="rec-leg-odds">${formatOdds(leg.odds)} · ${leg.game}</span>
                             </div>
                         </div>
                     `).join('')}
@@ -632,9 +594,9 @@ function updateParlayUI() {
         builder.classList.remove('has-picks');
         picksContainer.innerHTML = '<p class="empty-slip">Click picks below to add them to your parlay</p>';
         legCount.textContent = '0 legs';
-        combinedOddsEl.textContent = '\u2014';
-        payoutEl.textContent = '\u2014';
-        confEl.textContent = '\u2014';
+        combinedOddsEl.textContent = '—';
+        payoutEl.textContent = '—';
+        confEl.textContent = '—';
         confBar.style.width = '0%';
         confBar.className = 'conf-bar-fill';
         return;
@@ -648,7 +610,7 @@ function updateParlayUI() {
             <span class="pick-conf-dot ${getConfidenceClass(pick.confidence)}"></span>
             <span>${pick.label} (${formatOdds(pick.odds)})</span>
             <span class="pick-conf-tag">${pick.confidence}%</span>
-            <span class="remove-pick" onclick="removePick('${pick.gameId}', '${pick.betType}')">\u2715</span>
+            <span class="remove-pick" onclick="removePick('${pick.gameId}', '${pick.betType}')">✕</span>
         </div>
     `).join('');
 
@@ -678,23 +640,25 @@ function formatOdds(odds) {
     return odds > 0 ? `+${odds}` : `${odds}`;
 }
 
-// ===== LEAGUE CONFIG =====
-const LEAGUES = [
-    { id: 'all', icon: '', label: 'All Games' },
-    { id: 'nba', icon: '\ud83c\udfc0', label: 'NBA' },
-    { id: 'nhl', icon: '\ud83c\udfd2', label: 'NHL' },
-    { id: 'ncaab', icon: '\ud83c\udfc0', label: 'NCAAB' },
-    { id: 'nfl', icon: '\ud83c\udfc8', label: 'NFL' },
-    { id: 'ncaaf', icon: '\ud83c\udfc8', label: 'NCAAF' },
-];
-
+// ===== LEAGUE FILTER BAR =====
 function renderFilterBar() {
     const bar = document.getElementById('filter-bar');
-    bar.innerHTML = LEAGUES.map(league => {
+
+    // Build dynamic league list from actual data
+    const leaguesInData = new Set(GAMES.map(g => g.league));
+    const allLeagues = [{ id: 'all', icon: '', label: 'All Games' }];
+
+    for (const [sportKey, info] of Object.entries(LEAGUE_MAP)) {
+        if (leaguesInData.has(info.id)) {
+            allLeagues.push(info);
+        }
+    }
+
+    bar.innerHTML = allLeagues.map(league => {
         const count = league.id === 'all'
             ? GAMES.length
             : GAMES.filter(g => g.league === league.id).length;
-        const label = `${league.icon} ${league.label} (${count})`.trim();
+        const label = `${league.icon || ''} ${league.label} (${count})`.trim();
         return `<button class="filter-btn ${league.id === 'all' ? 'active' : ''}" 
                         data-filter="${league.id}" 
                         onclick="filterGames('${league.id}')"
