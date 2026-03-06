@@ -36,6 +36,39 @@ const LEAGUE_MAP = {
     'baseball_mlb': { id: 'mlb', icon: '⚾', label: 'MLB' },
 };
 
+// ===== NCAAB FILTER: Top 25 + Power Conference Programs =====
+const NOTABLE_NCAAB_TEAMS = [
+    'duke blue devils', 'arizona wildcats', 'michigan wolverines',
+    'uconn huskies', 'connecticut huskies', 'florida gators',
+    'iowa state cyclones', 'houston cougars', 'michigan state spartans',
+    'nebraska cornhuskers', 'texas tech red raiders', 'illinois fighting illini',
+    'gonzaga bulldogs', 'virginia cavaliers', 'kansas jayhawks',
+    'purdue boilermakers', 'alabama crimson tide', 'north carolina tar heels',
+    'st. john\'s red storm', 'saint john\'s red storm',
+    'miami hurricanes', 'arkansas razorbacks',
+    'saint mary\'s gaels', 'tennessee volunteers',
+    'vanderbilt commodores', 'saint louis billikens',
+    'kentucky wildcats', 'auburn tigers', 'baylor bears',
+    'marquette golden eagles', 'creighton bluejays', 'xavier musketeers',
+    'villanova wildcats', 'texas longhorns', 'oregon ducks',
+    'wisconsin badgers', 'ucla bruins', 'memphis tigers',
+    'indiana hoosiers', 'ohio state buckeyes', 'syracuse orange',
+    'louisville cardinals', 'georgetown hoyas', 'clemson tigers',
+    'maryland terrapins', 'oklahoma sooners', 'colorado buffaloes',
+    'cincinnati bearcats', 'pittsburgh panthers', 'west virginia mountaineers',
+    'usc trojans', 'iowa hawkeyes', 'michigan state', 'notre dame fighting irish',
+    'stanford cardinal', 'penn state nittany lions', 'rutgers scarlet knights',
+    'ole miss rebels', 'mississippi state bulldogs', 'lsu tigers',
+    'georgia bulldogs', 'south carolina gamecocks', 'missouri tigers',
+    'florida state seminoles', 'wake forest demon deacons',
+    'nc state wolfpack', 'north carolina state',
+    'texas a&m aggies', 'smu mustangs', 'tcu horned frogs',
+    'kansas state wildcats', 'oklahoma state cowboys',
+    'providence friars', 'butler bulldogs', 'dayton flyers',
+    'san diego state aztecs', 'byu cougars', 'new mexico lobos',
+];
+const NCAAB_KEYWORDS = NOTABLE_NCAAB_TEAMS.map(t => t.toLowerCase());
+
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
     // Set dynamic date
@@ -196,47 +229,12 @@ function transformGames(games, picks) {
     // Only include games from leagues we support
     let supportedGames = games.filter(game => LEAGUE_MAP[game.sport_key]);
 
-    // NCAAB: Only show games featuring Top 25 / power conference / well-known programs
-    // Use full team name tokens to avoid false matches (e.g. "UNC Greensboro" ≠ "UNC")
-    const NOTABLE_NCAAB_TEAMS = [
-        // Current AP Top 25 (March 2026)
-        'duke blue devils', 'arizona wildcats', 'michigan wolverines',
-        'uconn huskies', 'connecticut huskies', 'florida gators',
-        'iowa state cyclones', 'houston cougars', 'michigan state spartans',
-        'nebraska cornhuskers', 'texas tech red raiders', 'illinois fighting illini',
-        'gonzaga bulldogs', 'virginia cavaliers', 'kansas jayhawks',
-        'purdue boilermakers', 'alabama crimson tide', 'north carolina tar heels',
-        'st. john\'s red storm', 'saint john\'s red storm',
-        'miami hurricanes', 'arkansas razorbacks',
-        'saint mary\'s gaels', 'tennessee volunteers',
-        'vanderbilt commodores', 'saint louis billikens',
-        // Other notable programs
-        'kentucky wildcats', 'auburn tigers', 'baylor bears',
-        'marquette golden eagles', 'creighton bluejays', 'xavier musketeers',
-        'villanova wildcats', 'texas longhorns', 'oregon ducks',
-        'wisconsin badgers', 'ucla bruins', 'memphis tigers',
-        'indiana hoosiers', 'ohio state buckeyes', 'syracuse orange',
-        'louisville cardinals', 'georgetown hoyas', 'clemson tigers',
-        'maryland terrapins', 'oklahoma sooners', 'colorado buffaloes',
-        'cincinnati bearcats', 'pittsburgh panthers', 'west virginia mountaineers',
-        'usc trojans', 'iowa hawkeyes', 'michigan state', 'notre dame fighting irish',
-        'stanford cardinal', 'penn state nittany lions', 'rutgers scarlet knights',
-        'ole miss rebels', 'mississippi state bulldogs', 'lsu tigers',
-        'georgia bulldogs', 'south carolina gamecocks', 'missouri tigers',
-        'florida state seminoles', 'wake forest demon deacons',
-        'nc state wolfpack', 'north carolina state',
-        'texas a&m aggies', 'smu mustangs', 'tcu horned frogs',
-        'kansas state wildcats', 'oklahoma state cowboys',
-        'providence friars', 'butler bulldogs', 'dayton flyers',
-        'san diego state aztecs', 'byu cougars', 'new mexico lobos',
-    ];
-    // Build searchable keywords from the notable list
-    const ncaabKeywords = NOTABLE_NCAAB_TEAMS.map(t => t.toLowerCase());
+    // NCAAB: Only show games featuring Top 25 / power conference programs
     supportedGames = supportedGames.filter(game => {
         if (game.sport_key !== 'basketball_ncaab') return true;
         const home = (game.home_team || '').toLowerCase();
         const away = (game.away_team || '').toLowerCase();
-        return ncaabKeywords.some(team => home.includes(team) || team.includes(home) ||
+        return NCAAB_KEYWORDS.some(team => home.includes(team) || team.includes(home) ||
             away.includes(team) || team.includes(away));
     });
     return supportedGames.map(game => {
@@ -283,29 +281,33 @@ function transformGames(games, picks) {
         }
 
         // 2. SPREAD: AI's confidence that each team covers the spread
-        //    When AI directly picks spread → use its confidence
-        //    When AI picks ML → derive spread confidence (covering a spread is harder than winning outright)
-        //    Formula: compress the AI's ML edge toward 50%: spreadConf = 50 + (mlConf - 50) * 0.35
-        //    Examples: 80% ML → ~60% spread, 65% ML → ~55% spread, 50% ML → 50% spread
-        let homeSpreadConf, awaySpreadConf;
+        //    Spread confidence is always derived from ML confidence (compressed toward 50%)
+        //    because covering a spread is harder than winning outright.
+        //    When AI picks the spread, we blend its confidence with the derived value.
+        //    Spread confidence is ALWAYS capped at or below the ML confidence.
+
+        // First: compute the base spread confidence from ML (compressed toward 50%)
+        const homeSpreadBase = Math.round(50 + (homeMLConf - 50) * 0.35);
+        const awaySpreadBase = Math.round(50 + (awayMLConf - 50) * 0.35);
+
+        let homeSpreadConf = homeSpreadBase;
+        let awaySpreadConf = awaySpreadBase;
 
         if (pick && pick.pick_type === 'spread') {
-            // AI directly analyzed the spread — use its confidence
+            // AI analyzed the spread — blend AI confidence with ML-derived (60/40 weight)
             if (pick.picked_team === game.home_team) {
-                homeSpreadConf = pickConf;
-                awaySpreadConf = 100 - pickConf;
+                homeSpreadConf = Math.round(homeSpreadBase * 0.4 + pickConf * 0.6);
+                awaySpreadConf = 100 - homeSpreadConf;
             } else if (pick.picked_team === game.away_team) {
-                awaySpreadConf = pickConf;
-                homeSpreadConf = 100 - pickConf;
-            } else {
-                homeSpreadConf = 52;
-                awaySpreadConf = 48;
+                awaySpreadConf = Math.round(awaySpreadBase * 0.4 + pickConf * 0.6);
+                homeSpreadConf = 100 - awaySpreadConf;
             }
-        } else {
-            // Derive from AI's ML confidence — compress edge toward 50%
-            homeSpreadConf = Math.round(50 + (homeMLConf - 50) * 0.35);
-            awaySpreadConf = Math.round(50 + (awayMLConf - 50) * 0.35);
         }
+
+        // Cap: spread confidence should never exceed ML confidence for the same team
+        homeSpreadConf = Math.min(homeSpreadConf, homeMLConf);
+        awaySpreadConf = Math.min(awaySpreadConf, awayMLConf);
+
         // Use the favorite's spread confidence as the primary "spread" confidence
         const spreadConf = homeSpread < 0 ? homeSpreadConf : awaySpreadConf;
 
@@ -503,12 +505,10 @@ function transformParlays(parlays) {
                     odds: leg.odds || -110,
                     conf: realConf !== null ? realConf : (leg.confidence || p.confidence || 50),
                     game: leg.game || '',
-                    _hasMatch: realConf !== null, // track if this leg matched a displayed game
                 };
-            }).filter(leg => leg._hasMatch), // Remove legs from filtered-out games
+            }),
             rationale: p.rationale || 'AI-generated parlay combination.',
-        }))
-        .filter(p => p.legs.length >= 2); // Parlays need at least 2 legs
+        }));
 }
 
 // ===== HELPER FUNCTIONS =====
