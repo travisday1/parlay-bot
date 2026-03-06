@@ -112,6 +112,134 @@
                 <div id="recommended-parlays" class="recommended-grid"></div>
             </section>
 
+            <!-- Performance Tracker -->
+            <section id="performance-section" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">📈 Performance Tracker</h2>
+                    <p class="section-desc">Historical $100-per-bet results — see how the bot performs over time</p>
+                </div>
+                <div class="perf-range-bar">
+                    <button class="perf-range-btn active" data-range="7" onclick="setPerformanceRange(7)">Last 7
+                        Days</button>
+                    <button class="perf-range-btn" data-range="30" onclick="setPerformanceRange(30)">Last 30
+                        Days</button>
+                    <button class="perf-range-btn" data-range="90" onclick="setPerformanceRange(90)">Last 90
+                        Days</button>
+                    <button class="perf-range-btn" data-range="custom" onclick="showCustomRange()">Custom</button>
+                    <div id="custom-range-inputs" class="custom-range-inputs" style="display:none;">
+                        <input type="date" id="perf-start-date" class="date-input">
+                        <span class="date-sep">to</span>
+                        <input type="date" id="perf-end-date" class="date-input">
+                        <button class="perf-go-btn" onclick="applyCustomRange()">Go</button>
+                    </div>
+                </div>
+                <div class="perf-cards-grid">
+                    <!-- Locks Card -->
+                    <div class="perf-card perf-card-lock">
+                        <div class="perf-card-header">
+                            <span class="perf-card-icon">🔒</span>
+                            <h3>Locks</h3>
+                            <span class="perf-card-tag tag-lock">75%+ Confidence</span>
+                        </div>
+                        <div class="perf-card-body">
+                            <div class="perf-stat-row">
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">Record</span>
+                                    <span id="lock-record" class="perf-stat-value">—</span>
+                                </div>
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">Win Rate</span>
+                                    <span id="lock-winrate" class="perf-stat-value">—</span>
+                                </div>
+                            </div>
+                            <div class="perf-stat-row">
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">$100/Bet Profit</span>
+                                    <span id="lock-profit" class="perf-stat-value perf-profit">—</span>
+                                </div>
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">ROI</span>
+                                    <span id="lock-roi" class="perf-stat-value">—</span>
+                                </div>
+                            </div>
+                            <div class="perf-bar-container">
+                                <div id="lock-bar" class="perf-bar" style="width:0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Value Plays Card -->
+                    <div class="perf-card perf-card-value">
+                        <div class="perf-card-header">
+                            <span class="perf-card-icon">💎</span>
+                            <h3>Value Plays</h3>
+                            <span class="perf-card-tag tag-value">60-74% Confidence</span>
+                        </div>
+                        <div class="perf-card-body">
+                            <div class="perf-stat-row">
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">Record</span>
+                                    <span id="value-record" class="perf-stat-value">—</span>
+                                </div>
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">Win Rate</span>
+                                    <span id="value-winrate" class="perf-stat-value">—</span>
+                                </div>
+                            </div>
+                            <div class="perf-stat-row">
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">$100/Bet Profit</span>
+                                    <span id="value-profit" class="perf-stat-value perf-profit">—</span>
+                                </div>
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">ROI</span>
+                                    <span id="value-roi" class="perf-stat-value">—</span>
+                                </div>
+                            </div>
+                            <div class="perf-bar-container">
+                                <div id="value-bar" class="perf-bar" style="width:0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Big Swings Card -->
+                    <div class="perf-card perf-card-longshot">
+                        <div class="perf-card-header">
+                            <span class="perf-card-icon">🚀</span>
+                            <h3>Big Swings</h3>
+                            <span class="perf-card-tag tag-longshot">Under 60% Confidence</span>
+                        </div>
+                        <div class="perf-card-body">
+                            <div class="perf-stat-row">
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">Record</span>
+                                    <span id="longshot-record" class="perf-stat-value">—</span>
+                                </div>
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">Win Rate</span>
+                                    <span id="longshot-winrate" class="perf-stat-value">—</span>
+                                </div>
+                            </div>
+                            <div class="perf-stat-row">
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">$100/Bet Profit</span>
+                                    <span id="longshot-profit" class="perf-stat-value perf-profit">—</span>
+                                </div>
+                                <div class="perf-stat">
+                                    <span class="perf-stat-label">ROI</span>
+                                    <span id="longshot-roi" class="perf-stat-value">—</span>
+                                </div>
+                            </div>
+                            <div class="perf-bar-container">
+                                <div id="longshot-bar" class="perf-bar" style="width:0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p id="perf-empty" class="perf-empty" style="display:none;">No settled picks yet. Check back after games
+                    are completed!</p>
+            </section>
+
             <!-- Games Section -->
             <section id="games-section" class="section">
                 <div class="section-header">

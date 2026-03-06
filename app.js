@@ -166,6 +166,10 @@ async function loadLiveData() {
         const spinner = document.getElementById('loading-spinner');
         if (spinner) spinner.style.display = 'none';
 
+        // Load performance tracker data (default: last 7 days)
+        const { startDate, endDate } = getDateRange(7);
+        refreshPerformance(startDate, endDate);
+
     } catch (error) {
         console.error('❌ Error loading data from Supabase:', error);
         // Show error state
@@ -711,4 +715,211 @@ function filterGames(league) {
             card.classList.add('hidden');
         }
     });
+}
+
+// ===== PERFORMANCE TRACKER =====
+let currentPerfRange = 7;
+
+async function loadPerformanceData(startDate, endDate) {
+    try {
+        // Query pick_results joined with daily_picks to get tier info
+        const { data: results, error } = await sb
+            .from('pick_results')
+            .select('*, daily_picks!inner(tier, pick_date, picked_odds, pick_type, picked_team)')
+            .gte('daily_picks.pick_date', startDate)
+            .lte('daily_picks.pick_date', endDate);
+
+        if (error) {
+            console.error('Error loading performance data:', error);
+            // Fallback: try querying separately
+            return await loadPerformanceFallback(startDate, endDate);
+        }
+
+        return results || [];
+    } catch (e) {
+        console.error('Performance data error:', e);
+        return [];
+    }
+}
+
+async function loadPerformanceFallback(startDate, endDate) {
+    // Fallback: query both tables and join client-side
+    const { data: picks } = await sb
+        .from('daily_picks')
+        .select('id, tier, pick_date, picked_odds')
+        .gte('pick_date', startDate)
+        .lte('pick_date', endDate);
+
+    if (!picks || picks.length === 0) return [];
+
+    const pickIds = picks.map(p => p.id);
+    const { data: results } = await sb
+        .from('pick_results')
+        .select('*')
+        .in('pick_id', pickIds);
+
+    if (!results) return [];
+
+    // Join them
+    const pickMap = {};
+    picks.forEach(p => { pickMap[p.id] = p; });
+
+    return results.map(r => ({
+        ...r,
+        daily_picks: pickMap[r.pick_id] || {}
+    }));
+}
+
+function calculateTierStats(results, tier) {
+    const tierResults = results.filter(r => {
+        const pickTier = r.daily_picks?.tier;
+        return pickTier === tier;
+    });
+
+    if (tierResults.length === 0) {
+        return { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0, totalWagered: 0 };
+    }
+
+    let wins = 0, losses = 0, pushes = 0;
+    let totalPayout = 0;
+
+    for (const r of tierResults) {
+        if (r.result === 'win') {
+            wins++;
+            totalPayout += parseFloat(r.payout_on_100) || 0;
+        } else if (r.result === 'loss') {
+            losses++;
+            totalPayout += 0;
+        } else if (r.result === 'push') {
+            pushes++;
+            totalPayout += 100; // stake returned
+        }
+    }
+
+    const total = wins + losses + pushes;
+    const totalWagered = total * 100; // $100 per bet
+    const profit = totalPayout - totalWagered;
+    const winRate = total > 0 ? (wins / (wins + losses)) * 100 : 0;
+    const roi = totalWagered > 0 ? (profit / totalWagered) * 100 : 0;
+
+    return { wins, losses, pushes, total, winRate, profit, roi, totalWagered };
+}
+
+function renderPerformanceCard(prefix, stats) {
+    const recordEl = document.getElementById(`${prefix}-record`);
+    const winrateEl = document.getElementById(`${prefix}-winrate`);
+    const profitEl = document.getElementById(`${prefix}-profit`);
+    const roiEl = document.getElementById(`${prefix}-roi`);
+    const barEl = document.getElementById(`${prefix}-bar`);
+
+    if (!recordEl) return;
+
+    if (stats.total === 0) {
+        recordEl.textContent = '0-0';
+        winrateEl.textContent = '—';
+        profitEl.textContent = '—';
+        profitEl.className = 'perf-stat-value perf-profit';
+        roiEl.textContent = '—';
+        barEl.style.width = '0%';
+        return;
+    }
+
+    recordEl.textContent = `${stats.wins}-${stats.losses}${stats.pushes > 0 ? `-${stats.pushes}` : ''}`;
+    winrateEl.textContent = `${stats.winRate.toFixed(1)}%`;
+
+    const profitStr = stats.profit >= 0
+        ? `+$${stats.profit.toFixed(0)}`
+        : `-$${Math.abs(stats.profit).toFixed(0)}`;
+    profitEl.textContent = profitStr;
+    profitEl.className = `perf-stat-value perf-profit ${stats.profit >= 0 ? 'positive' : 'negative'}`;
+
+    const roiStr = stats.roi >= 0
+        ? `+${stats.roi.toFixed(1)}%`
+        : `${stats.roi.toFixed(1)}%`;
+    roiEl.textContent = roiStr;
+
+    barEl.style.width = `${Math.min(stats.winRate, 100)}%`;
+}
+
+async function refreshPerformance(startDate, endDate) {
+    const results = await loadPerformanceData(startDate, endDate);
+
+    const emptyMsg = document.getElementById('perf-empty');
+    const cardsGrid = document.querySelector('.perf-cards-grid');
+
+    if (results.length === 0) {
+        if (emptyMsg) emptyMsg.style.display = 'block';
+        if (cardsGrid) cardsGrid.style.display = 'none';
+        // Show placeholder stats
+        renderPerformanceCard('lock', { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0 });
+        renderPerformanceCard('value', { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0 });
+        renderPerformanceCard('longshot', { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0 });
+        return;
+    }
+
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    if (cardsGrid) cardsGrid.style.display = 'grid';
+
+    const lockStats = calculateTierStats(results, 'lock');
+    const valueStats = calculateTierStats(results, 'value');
+    const longshotStats = calculateTierStats(results, 'longshot');
+
+    renderPerformanceCard('lock', lockStats);
+    renderPerformanceCard('value', valueStats);
+    renderPerformanceCard('longshot', longshotStats);
+
+    console.log(`📈 Performance loaded: ${results.length} settled picks in range`);
+}
+
+function getDateRange(days) {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+
+    const fmt = d => d.toISOString().split('T')[0];
+    return { startDate: fmt(start), endDate: fmt(end) };
+}
+
+function setPerformanceRange(days) {
+    currentPerfRange = days;
+
+    // Update button states
+    document.querySelectorAll('.perf-range-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.range) === days);
+    });
+
+    // Hide custom inputs
+    const customInputs = document.getElementById('custom-range-inputs');
+    if (customInputs) customInputs.style.display = 'none';
+
+    const { startDate, endDate } = getDateRange(days);
+    refreshPerformance(startDate, endDate);
+}
+
+function showCustomRange() {
+    // Activate custom button
+    document.querySelectorAll('.perf-range-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.range === 'custom');
+    });
+
+    const customInputs = document.getElementById('custom-range-inputs');
+    if (customInputs) customInputs.style.display = 'flex';
+
+    // Set default dates
+    const endInput = document.getElementById('perf-end-date');
+    const startInput = document.getElementById('perf-start-date');
+    if (endInput && !endInput.value) endInput.value = new Date().toISOString().split('T')[0];
+    if (startInput && !startInput.value) {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        startInput.value = d.toISOString().split('T')[0];
+    }
+}
+
+function applyCustomRange() {
+    const startDate = document.getElementById('perf-start-date')?.value;
+    const endDate = document.getElementById('perf-end-date')?.value;
+    if (startDate && endDate) {
+        refreshPerformance(startDate, endDate);
+    }
 }
