@@ -1411,3 +1411,237 @@ footer {
     color: var(--text-muted);
     font-size: 0.95rem;
 }
+
+/* ===== CONFIDENCE FILTER BAR ===== */
+.confidence-filter-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: var(--gap-lg);
+}
+
+.conf-filter-btn {
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-glass);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    backdrop-filter: blur(6px);
+}
+
+.conf-filter-btn:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.conf-filter-btn.active {
+    color: #fff;
+    border-color: transparent;
+}
+
+.conf-filter-btn[data-filter="all"].active {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+}
+
+.conf-filter-btn[data-filter="lock"].active {
+    background: linear-gradient(135deg, var(--accent-green), #16a34a);
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
+}
+
+.conf-filter-btn[data-filter="lean"].active {
+    background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.conf-filter-btn[data-filter="tossup"].active {
+    background: linear-gradient(135deg, var(--accent-amber), #d97706);
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+}
+
+.game-card.hidden,
+.game-card.conf-hidden {
+    display: none !important;
+}
+
+/* ===== PARLAY BUILDER ===== */
+.parlay-builder {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--gap-lg);
+    margin-bottom: var(--gap-lg);
+    backdrop-filter: blur(12px);
+}
+
+.builder-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-md);
+    align-items: center;
+    margin-bottom: var(--gap-md);
+}
+
+.builder-label {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.builder-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+}
+
+.builder-input-group label {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.builder-input-group input[type="number"] {
+    width: 48px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 4px;
+    font-weight: 700;
+}
+
+.builder-input-group input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+.builder-total {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.builder-total .legs-count {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.builder-total .legs-label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.builder-generate-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--accent-green), #16a34a);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    box-shadow: 0 0 16px rgba(34, 197, 94, 0.2);
+}
+
+.builder-generate-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(34, 197, 94, 0.35);
+}
+
+.builder-generate-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.builder-suggestion {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: var(--gap-md);
+    margin-top: var(--gap-md);
+}
+
+.builder-suggestion-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-green);
+    margin-bottom: 8px;
+}
+
+.builder-suggestion-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.builder-pick-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    background: var(--bg-glass);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.builder-pick-chip:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.builder-pick-chip.chip-lock {
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.builder-pick-chip.chip-lean {
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.builder-pick-chip.chip-tossup {
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.builder-odds-total {
+    margin-top: 12px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.builder-odds-total strong {
+    color: var(--accent-green);
+    font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+    .builder-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .builder-total {
+        margin-left: 0;
+        justify-content: center;
+    }
+}

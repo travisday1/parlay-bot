@@ -112,7 +112,41 @@
                 <div id="recommended-parlays" class="recommended-grid"></div>
             </section>
 
-            <!-- Performance Tracker -->
+            <!-- Parlay Leg Mixer -->
+            <section id="builder-section" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">🎰 Build Your Parlay</h2>
+                    <p class="section-desc">Choose your mix — pick how many locks, leans, and toss-ups you want</p>
+                </div>
+                <div class="parlay-builder">
+                    <div class="builder-controls">
+                        <span class="builder-label">Tier Mix</span>
+                        <div class="builder-input-group">
+                            <label>🔒 Locks</label>
+                            <input type="number" id="builder-locks" min="0" max="10" value="2"
+                                oninput="updateBuilderTotal()">
+                        </div>
+                        <div class="builder-input-group">
+                            <label>✅ Leans</label>
+                            <input type="number" id="builder-leans" min="0" max="10" value="1"
+                                oninput="updateBuilderTotal()">
+                        </div>
+                        <div class="builder-input-group">
+                            <label>⚠️ Toss-Ups</label>
+                            <input type="number" id="builder-tossups" min="0" max="10" value="0"
+                                oninput="updateBuilderTotal()">
+                        </div>
+                        <div class="builder-total">
+                            <span class="legs-count" id="builder-legs-count">3</span>
+                            <span class="legs-label">legs</span>
+                        </div>
+                        <button class="builder-generate-btn" id="builder-generate-btn" onclick="generateMixedParlay()">
+                            🎯 Generate Parlay
+                        </button>
+                    </div>
+                    <div id="builder-suggestion-area"></div>
+                </div>
+            </section>
             <section id="performance-section" class="section">
                 <div class="section-header">
                     <h2 class="section-title">📈 Performance Tracker</h2>
@@ -245,6 +279,16 @@
                 <div class="section-header">
                     <h2 class="section-title">📊 Today's Games Analysis</h2>
                     <p class="section-desc">Click picks to add to your parlay — ML, Spread, and Over/Under available</p>
+                </div>
+                <div class="confidence-filter-bar" id="confidence-filter-bar">
+                    <button class="conf-filter-btn active" data-filter="all" onclick="toggleConfFilter('all')">All
+                        Games</button>
+                    <button class="conf-filter-btn" data-filter="lock" onclick="toggleConfFilter('lock')">🔒
+                        Locks</button>
+                    <button class="conf-filter-btn" data-filter="lean" onclick="toggleConfFilter('lean')">✅
+                        Leans</button>
+                    <button class="conf-filter-btn" data-filter="tossup" onclick="toggleConfFilter('tossup')">⚠️
+                        Toss-Ups</button>
                 </div>
                 <div id="games-grid" class="games-grid">
                     <div class="loading-state" id="loading-spinner">

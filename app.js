@@ -22,6 +22,7 @@ let RECOMMENDED_PARLAYS = [];
 let selectedPicks = [];
 let authenticated = false;
 let dataLoaded = false;
+let activeConfFilters = new Set(); // multi-select confidence filter: 'lock', 'lean', 'tossup'
 
 // ===== PASSWORD =====
 const SITE_PASSWORD = 'parlay2026';
@@ -366,6 +367,9 @@ function renderGames() {
         return;
     }
     grid.innerHTML = GAMES.map(game => createGameCard(game)).join('');
+
+    // Apply confidence filter after rendering
+    applyConfidenceFilter();
 }
 
 function getConfidenceClass(conf) {
@@ -673,6 +677,169 @@ function calculateParlayOdds(oddsArray) {
 
 function formatOdds(odds) {
     return odds > 0 ? `+${odds}` : `${odds}`;
+}
+
+// ===== CONFIDENCE FILTER =====
+function toggleConfFilter(filter) {
+    if (filter === 'all') {
+        // 'All' clears specific filters
+        activeConfFilters.clear();
+    } else {
+        // Toggle specific filter
+        if (activeConfFilters.has(filter)) {
+            activeConfFilters.delete(filter);
+        } else {
+            activeConfFilters.add(filter);
+        }
+    }
+
+    // Update button states
+    document.querySelectorAll('.conf-filter-btn').forEach(btn => {
+        const f = btn.dataset.filter;
+        if (f === 'all') {
+            btn.classList.toggle('active', activeConfFilters.size === 0);
+        } else {
+            btn.classList.toggle('active', activeConfFilters.has(f));
+        }
+    });
+
+    applyConfidenceFilter();
+}
+
+function applyConfidenceFilter() {
+    // If no specific filters active, show all
+    if (activeConfFilters.size === 0) {
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.classList.remove('conf-hidden');
+        });
+        return;
+    }
+
+    // Check each card's confidence tag against active filters
+    document.querySelectorAll('.game-card').forEach(card => {
+        const badge = card.querySelector('.confidence-badge');
+        if (!badge) return;
+
+        const cls = badge.classList;
+        let cardTier = 'tossup';
+        if (cls.contains('lock')) cardTier = 'lock';
+        else if (cls.contains('lean')) cardTier = 'lean';
+
+        // Also respect the league filter — don't unhide league-filtered cards
+        const isLeagueHidden = card.classList.contains('hidden');
+
+        if (activeConfFilters.has(cardTier)) {
+            card.classList.remove('conf-hidden');
+        } else {
+            card.classList.add('conf-hidden');
+        }
+    });
+}
+
+// ===== PARLAY LEG MIXER =====
+function updateBuilderTotal() {
+    const locks = parseInt(document.getElementById('builder-locks')?.value || 0);
+    const leans = parseInt(document.getElementById('builder-leans')?.value || 0);
+    const tossups = parseInt(document.getElementById('builder-tossups')?.value || 0);
+    const total = locks + leans + tossups;
+
+    const countEl = document.getElementById('builder-legs-count');
+    if (countEl) countEl.textContent = total;
+
+    const btn = document.getElementById('builder-generate-btn');
+    if (btn) btn.disabled = total < 2;
+}
+
+function generateMixedParlay() {
+    const locks = parseInt(document.getElementById('builder-locks')?.value || 0);
+    const leans = parseInt(document.getElementById('builder-leans')?.value || 0);
+    const tossups = parseInt(document.getElementById('builder-tossups')?.value || 0);
+    const total = locks + leans + tossups;
+
+    if (total < 2) return;
+
+    // Categorize all available picks by confidence tier
+    const lockGames = GAMES.filter(g => {
+        const tag = getOverallConfidenceTag(g);
+        return tag.cls === 'lock';
+    });
+    const leanGames = GAMES.filter(g => {
+        const tag = getOverallConfidenceTag(g);
+        return tag.cls === 'lean';
+    });
+    const tossupGames = GAMES.filter(g => {
+        const tag = getOverallConfidenceTag(g);
+        return tag.cls === 'tossup';
+    });
+
+    // Shuffle and pick from each tier
+    const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+    const pickFromTier = (games, count) => shuffle(games).slice(0, count);
+
+    const selectedLocks = pickFromTier(lockGames, locks);
+    const selectedLeans = pickFromTier(leanGames, leans);
+    const selectedTossups = pickFromTier(tossupGames, tossups);
+
+    const allSelected = [...selectedLocks, ...selectedLeans, ...selectedTossups];
+
+    // Build suggestion display
+    const container = document.getElementById('builder-suggestion-area');
+    if (!container) return;
+
+    if (allSelected.length < total) {
+        container.innerHTML = `
+            <div class="builder-suggestion">
+                <div class="builder-suggestion-title">⚠️ Not enough games available</div>
+                <p style="color: var(--text-secondary); font-size: 0.85rem;">
+                    Available: ${lockGames.length} locks, ${leanGames.length} leans, ${tossupGames.length} toss-ups.
+                    Requested: ${locks} locks, ${leans} leans, ${tossups} toss-ups.
+                </p>
+            </div>`;
+        return;
+    }
+
+    // For each game, pick the best bet (highest confidence pick)
+    const legs = allSelected.map(game => {
+        const tag = getOverallConfidenceTag(game);
+        // Pick the moneyline favorite (highest confidence)
+        const bestConf = Math.max(game.confidence.homeML, game.confidence.awayML);
+        const bestTeam = game.confidence.homeML >= game.confidence.awayML
+            ? game.home.abbr : game.away.abbr;
+        const bestOdds = game.confidence.homeML >= game.confidence.awayML
+            ? game.moneyline.homeOdds : game.moneyline.awayOdds;
+        return {
+            team: bestTeam,
+            odds: bestOdds,
+            confidence: bestConf,
+            tier: tag.cls,
+            game: `${game.away.abbr} @ ${game.home.abbr}`,
+            gameId: game.id
+        };
+    });
+
+    const { combinedDecimal, payout } = calculateParlayOdds(legs.map(l => l.odds));
+    const overallConf = calculateOverallConfidence(legs.map(l => l.confidence));
+
+    const chipClass = tier => tier === 'lock' ? 'chip-lock' : tier === 'lean' ? 'chip-lean' : 'chip-tossup';
+    const tierEmoji = tier => tier === 'lock' ? '🔒' : tier === 'lean' ? '✅' : '⚠️';
+
+    container.innerHTML = `
+        <div class="builder-suggestion">
+            <div class="builder-suggestion-title">🎯 Suggested ${total}-Leg Parlay</div>
+            <div class="builder-suggestion-picks">
+                ${legs.map(leg => `
+                    <div class="builder-pick-chip ${chipClass(leg.tier)}" 
+                         onclick="togglePick('${leg.gameId}', '${leg.team === GAMES.find(g => g.id === leg.gameId)?.home?.abbr ? 'homeML' : 'awayML'}', '${leg.team}', ${leg.odds}, ${leg.confidence})">
+                        ${tierEmoji(leg.tier)} ${leg.team} (${formatOdds(leg.odds)}) · ${leg.confidence}%
+                    </div>
+                `).join('')}
+            </div>
+            <div class="builder-odds-total">
+                Combined: <strong>${combinedDecimal.toFixed(2)}x</strong> · 
+                $100 pays <strong>$${payout.toFixed(2)}</strong> · 
+                Parlay confidence: <strong>${overallConf}%</strong>
+            </div>
+        </div>`;
 }
 
 // ===== LEAGUE FILTER BAR =====
