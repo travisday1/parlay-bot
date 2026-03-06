@@ -652,15 +652,35 @@ function updateParlayUI() {
     if (legCount) legCount.textContent = `${selectedPicks.length} leg${selectedPicks.length > 1 ? 's' : ''}`;
 
     if (picksContainer) {
-        picksContainer.innerHTML = selectedPicks.map(pick => `
-            <div class="sidebar-pick-chip">
+        picksContainer.innerHTML = selectedPicks.map(pick => {
+            // Determine bet type badge
+            let betLabel, badgeClass;
+            if (pick.betType === 'homeML' || pick.betType === 'awayML') {
+                betLabel = 'ML'; badgeClass = 'badge-ml';
+            } else if (pick.betType === 'spreadFav' || pick.betType === 'spreadDog') {
+                betLabel = 'PTS'; badgeClass = 'badge-pts';
+            } else {
+                betLabel = 'O/U'; badgeClass = 'badge-ou';
+            }
+
+            // Determine tier for chip coloring
+            const conf = pick.confidence || 0;
+            let chipClass, tierEmoji;
+            if (conf >= 75) { chipClass = 'chip-lock'; tierEmoji = '\ud83d\udd12'; }
+            else if (conf >= 60) { chipClass = 'chip-lean'; tierEmoji = '\u2705'; }
+            else { chipClass = 'chip-tossup'; tierEmoji = '\u26a0\ufe0f'; }
+
+            return `
+            <div class="sidebar-pick-chip ${chipClass}">
                 <span>
-                    <span class="pick-conf-dot ${getConfidenceClass(pick.confidence)}"></span>
-                    ${pick.label} (${formatOdds(pick.odds)}) · ${pick.confidence}%
+                    ${tierEmoji}
+                    <span class="bet-type-badge ${badgeClass}">${betLabel}</span>
+                    ${pick.label} (${formatOdds(pick.odds)}) \u00b7 ${pick.confidence}%
                 </span>
                 <span class="remove-pick" onclick="removePick('${pick.gameId}', '${pick.betType}')">✕</span>
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
 
     const { combinedDecimal, payout } = calculateParlayOdds(selectedPicks.map(p => p.odds));
@@ -1099,22 +1119,12 @@ function applyCustomRange() {
     }
 }
 
-// ===== SIDEBAR TOGGLE =====
+// ===== SIDEBAR TOGGLE (PUSH LAYOUT) =====
 function toggleSidebar() {
     const sidebar = document.getElementById('parlay-sidebar');
     if (!sidebar) return;
     sidebar.classList.toggle('open');
-
-    // Manage overlay
-    let overlay = document.getElementById('sidebar-overlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'sidebar-overlay';
-        overlay.className = 'sidebar-overlay';
-        overlay.onclick = toggleSidebar;
-        document.body.appendChild(overlay);
-    }
-    overlay.classList.toggle('active', sidebar.classList.contains('open'));
+    document.body.classList.toggle('sidebar-open', sidebar.classList.contains('open'));
 }
 
 // ===== SMOOTH NAV =====
