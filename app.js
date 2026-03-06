@@ -196,22 +196,48 @@ function transformGames(games, picks) {
     // Only include games from leagues we support
     let supportedGames = games.filter(game => LEAGUE_MAP[game.sport_key]);
 
-    // NCAAB: Only show games featuring Top 25 / major programs
-    const NOTABLE_NCAAB = [
-        'duke', 'arizona', 'michigan', 'uconn', 'connecticut', 'florida', 'iowa state',
-        'houston', 'michigan state', 'nebraska', 'texas tech', 'illinois', 'gonzaga',
-        'virginia', 'kansas', 'purdue', 'alabama', 'north carolina', 'unc', 'tar heels',
-        'st. john', 'saint john', 'miami', 'arkansas', 'saint mary', 'tennessee',
-        'vanderbilt', 'saint louis', 'kentucky', 'auburn', 'baylor', 'marquette',
-        'creighton', 'xavier', 'villanova', 'texas', 'oregon', 'wisconsin', 'ucla',
-        'memphis', 'indiana', 'ohio state', 'syracuse', 'louisville', 'georgetown',
-        'clemson', 'maryland', 'oklahoma', 'colorado', 'cincinnati', 'pittsburgh',
+    // NCAAB: Only show games featuring Top 25 / power conference / well-known programs
+    // Use full team name tokens to avoid false matches (e.g. "UNC Greensboro" ≠ "UNC")
+    const NOTABLE_NCAAB_TEAMS = [
+        // Current AP Top 25 (March 2026)
+        'duke blue devils', 'arizona wildcats', 'michigan wolverines',
+        'uconn huskies', 'connecticut huskies', 'florida gators',
+        'iowa state cyclones', 'houston cougars', 'michigan state spartans',
+        'nebraska cornhuskers', 'texas tech red raiders', 'illinois fighting illini',
+        'gonzaga bulldogs', 'virginia cavaliers', 'kansas jayhawks',
+        'purdue boilermakers', 'alabama crimson tide', 'north carolina tar heels',
+        'st. john\'s red storm', 'saint john\'s red storm',
+        'miami hurricanes', 'arkansas razorbacks',
+        'saint mary\'s gaels', 'tennessee volunteers',
+        'vanderbilt commodores', 'saint louis billikens',
+        // Other notable programs
+        'kentucky wildcats', 'auburn tigers', 'baylor bears',
+        'marquette golden eagles', 'creighton bluejays', 'xavier musketeers',
+        'villanova wildcats', 'texas longhorns', 'oregon ducks',
+        'wisconsin badgers', 'ucla bruins', 'memphis tigers',
+        'indiana hoosiers', 'ohio state buckeyes', 'syracuse orange',
+        'louisville cardinals', 'georgetown hoyas', 'clemson tigers',
+        'maryland terrapins', 'oklahoma sooners', 'colorado buffaloes',
+        'cincinnati bearcats', 'pittsburgh panthers', 'west virginia mountaineers',
+        'usc trojans', 'iowa hawkeyes', 'michigan state', 'notre dame fighting irish',
+        'stanford cardinal', 'penn state nittany lions', 'rutgers scarlet knights',
+        'ole miss rebels', 'mississippi state bulldogs', 'lsu tigers',
+        'georgia bulldogs', 'south carolina gamecocks', 'missouri tigers',
+        'florida state seminoles', 'wake forest demon deacons',
+        'nc state wolfpack', 'north carolina state',
+        'texas a&m aggies', 'smu mustangs', 'tcu horned frogs',
+        'kansas state wildcats', 'oklahoma state cowboys',
+        'providence friars', 'butler bulldogs', 'dayton flyers',
+        'san diego state aztecs', 'byu cougars', 'new mexico lobos',
     ];
+    // Build searchable keywords from the notable list
+    const ncaabKeywords = NOTABLE_NCAAB_TEAMS.map(t => t.toLowerCase());
     supportedGames = supportedGames.filter(game => {
-        if (game.sport_key !== 'basketball_ncaab') return true; // Keep all non-NCAAB games
+        if (game.sport_key !== 'basketball_ncaab') return true;
         const home = (game.home_team || '').toLowerCase();
         const away = (game.away_team || '').toLowerCase();
-        return NOTABLE_NCAAB.some(t => home.includes(t) || away.includes(t));
+        return ncaabKeywords.some(team => home.includes(team) || team.includes(home) ||
+            away.includes(team) || team.includes(away));
     });
     return supportedGames.map(game => {
         const leagueInfo = LEAGUE_MAP[game.sport_key] || { id: game.sport_key, icon: '🏟️', label: game.sport_title || game.sport_key };
