@@ -503,10 +503,12 @@ function transformParlays(parlays) {
                     odds: leg.odds || -110,
                     conf: realConf !== null ? realConf : (leg.confidence || p.confidence || 50),
                     game: leg.game || '',
+                    _hasMatch: realConf !== null, // track if this leg matched a displayed game
                 };
-            }),
+            }).filter(leg => leg._hasMatch), // Remove legs from filtered-out games
             rationale: p.rationale || 'AI-generated parlay combination.',
-        }));
+        }))
+        .filter(p => p.legs.length >= 2); // Parlays need at least 2 legs
 }
 
 // ===== HELPER FUNCTIONS =====
