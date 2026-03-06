@@ -299,22 +299,49 @@ function transformParlays(parlays) {
     const tierName = { 'safe': '🔒 The Safe Bag', 'value': '⚡ The Value Play', 'longshot': '🎲 The Big Swing' };
     const tierClass = { 'safe': 'lock', 'value': 'strong', 'longshot': 'value' };
 
-    // Helper: look up real confidence from GAMES array by matching team name
+    // Helper: look up real confidence from GAMES array by matching team name + bet type
     function lookupConfidence(legTeam, legOdds) {
+        const raw = (legTeam || '').toLowerCase().trim();
+
+        // Detect bet type from the leg label
+        const isSpread = raw.includes('spread') || raw.includes('pts') || raw.includes('+') || raw.includes('-');
+        const isOver = raw.includes('over') && !raw.includes('moneyline');
+        const isUnder = raw.includes('under') && !raw.includes('moneyline');
+        const isOUPick = isOver || isUnder;
+
+        // Strip bet-type suffixes from the team name for matching
+        const cleanTeam = raw
+            .replace(/\s*(ml|moneyline|spread|pts|over|under)\s*/gi, '')
+            .replace(/[+\-]\d+(\.\d+)?/g, '')
+            .trim();
+
         for (const game of GAMES) {
-            // Match by team abbreviation or full name
             const homeAbbr = game.home.abbr.toLowerCase();
             const awayAbbr = game.away.abbr.toLowerCase();
             const homeName = game.home.name.toLowerCase();
             const awayName = game.away.name.toLowerCase();
-            const teamLower = (legTeam || '').toLowerCase().replace(/ ml$/i, '');
+            const homeCity = (game.home.city || '').toLowerCase();
+            const awayCity = (game.away.city || '').toLowerCase();
 
-            if (teamLower.includes(homeAbbr) || teamLower.includes(homeName) ||
-                homeAbbr.includes(teamLower) || homeName.includes(teamLower)) {
+            // Check if this is an O/U pick (might say "Over" with no team name)
+            if (isOUPick) {
+                // Match by game description in the leg
+                return isOver ? (game.confidence.over || 50) : (game.confidence.under || 50);
+            }
+
+            const isHome = cleanTeam.includes(homeAbbr) || cleanTeam.includes(homeName) ||
+                homeAbbr.includes(cleanTeam) || homeName.includes(cleanTeam) ||
+                (homeCity && cleanTeam.includes(homeCity));
+            const isAway = cleanTeam.includes(awayAbbr) || cleanTeam.includes(awayName) ||
+                awayAbbr.includes(cleanTeam) || awayName.includes(cleanTeam) ||
+                (awayCity && cleanTeam.includes(awayCity));
+
+            if (isHome) {
+                if (isSpread) return game.confidence.spread || game.confidence.homeML;
                 return game.confidence.homeML;
             }
-            if (teamLower.includes(awayAbbr) || teamLower.includes(awayName) ||
-                awayAbbr.includes(teamLower) || awayName.includes(teamLower)) {
+            if (isAway) {
+                if (isSpread) return game.confidence.spread || game.confidence.awayML;
                 return game.confidence.awayML;
             }
         }
