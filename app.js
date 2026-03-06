@@ -194,7 +194,25 @@ async function loadLiveData() {
 
 function transformGames(games, picks) {
     // Only include games from leagues we support
-    const supportedGames = games.filter(game => LEAGUE_MAP[game.sport_key]);
+    let supportedGames = games.filter(game => LEAGUE_MAP[game.sport_key]);
+
+    // NCAAB: Only show games featuring Top 25 / major programs
+    const NOTABLE_NCAAB = [
+        'duke', 'arizona', 'michigan', 'uconn', 'connecticut', 'florida', 'iowa state',
+        'houston', 'michigan state', 'nebraska', 'texas tech', 'illinois', 'gonzaga',
+        'virginia', 'kansas', 'purdue', 'alabama', 'north carolina', 'unc', 'tar heels',
+        'st. john', 'saint john', 'miami', 'arkansas', 'saint mary', 'tennessee',
+        'vanderbilt', 'saint louis', 'kentucky', 'auburn', 'baylor', 'marquette',
+        'creighton', 'xavier', 'villanova', 'texas', 'oregon', 'wisconsin', 'ucla',
+        'memphis', 'indiana', 'ohio state', 'syracuse', 'louisville', 'georgetown',
+        'clemson', 'maryland', 'oklahoma', 'colorado', 'cincinnati', 'pittsburgh',
+    ];
+    supportedGames = supportedGames.filter(game => {
+        if (game.sport_key !== 'basketball_ncaab') return true; // Keep all non-NCAAB games
+        const home = (game.home_team || '').toLowerCase();
+        const away = (game.away_team || '').toLowerCase();
+        return NOTABLE_NCAAB.some(t => home.includes(t) || away.includes(t));
+    });
     return supportedGames.map(game => {
         const leagueInfo = LEAGUE_MAP[game.sport_key] || { id: game.sport_key, icon: '🏟️', label: game.sport_title || game.sport_key };
         const odds = game.odds?.[0] || {};
@@ -210,6 +228,9 @@ function transformGames(games, picks) {
 
         // === INDEPENDENT CONFIDENCE CALCULATION ===
         // Each bet type gets its own realistic probability
+        const pickConf = pick?.confidence || 50;
+        const homeML = odds.home_odds || -150;
+        const awayML = odds.away_odds || +130;
 
         // 1. MONEYLINE: Use implied probability from the actual odds
         //    -800 → ~89%, -150 → ~60%, +130 → ~43%, +300 → ~25%
@@ -219,8 +240,10 @@ function transformGames(games, picks) {
             return Math.round(100 / (americanOdds + 100) * 100);
         }
 
-        let homeMLConf = impliedProb(homeML);
-        let awayMLConf = impliedProb(awayML);
+        // Home court/ice/field advantage: ~3% boost for home team
+        const HOME_ADVANTAGE = 3;
+        let homeMLConf = Math.min(97, impliedProb(homeML) + HOME_ADVANTAGE);
+        let awayMLConf = Math.max(3, impliedProb(awayML) - HOME_ADVANTAGE);
 
         // If AI picked a team on the moneyline, blend AI confidence with implied odds
         if (pick && (pick.pick_type === 'moneyline')) {
