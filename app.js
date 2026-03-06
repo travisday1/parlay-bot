@@ -31,12 +31,9 @@ const SITE_PASSWORD = 'parlay2026';
 const LEAGUE_MAP = {
     'basketball_nba': { id: 'nba', icon: '🏀', label: 'NBA' },
     'basketball_ncaab': { id: 'ncaab', icon: '🏀', label: 'NCAAB' },
-    'basketball_wncaab': { id: 'wncaab', icon: '🏀', label: 'WNCAAB' },
     'icehockey_nhl': { id: 'nhl', icon: '🏒', label: 'NHL' },
     'americanfootball_nfl': { id: 'nfl', icon: '🏈', label: 'NFL' },
-    'americanfootball_ncaaf': { id: 'ncaaf', icon: '🏈', label: 'NCAAF' },
     'baseball_mlb': { id: 'mlb', icon: '⚾', label: 'MLB' },
-    'soccer_usa_mls': { id: 'mls', icon: '⚽', label: 'MLS' },
 };
 
 // ===== INITIALIZATION =====
@@ -161,6 +158,20 @@ async function loadLiveData() {
         // Remove loading spinner
         const spinner = document.getElementById('loading-spinner');
         if (spinner) spinner.style.display = 'none';
+
+        // Update "Last Updated" timestamp
+        if (games && games.length > 0) {
+            const latestUpdate = games.reduce((latest, g) => {
+                const t = new Date(g.updated_at || g.created_at || 0);
+                return t > latest ? t : latest;
+            }, new Date(0));
+            const lastUpdEl = document.getElementById('last-updated-time');
+            if (lastUpdEl) {
+                lastUpdEl.textContent = latestUpdate.toLocaleString('en-US', {
+                    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+                });
+            }
+        }
 
         // Load performance tracker data (default: last 7 days)
         const { startDate, endDate } = getDateRange(7);
@@ -560,10 +571,38 @@ function renderRecommendedParlays() {
                         <span class="stat-value ${getConfidenceClass(overallConf)}" style="font-size: 1rem;">${overallConf}%</span>
                     </div>
                 </div>
-                <div class="rec-rationale">${parlay.rationale}</div>
+            <div class="rec-rationale">${parlay.rationale}</div>
+                <button class="rec-add-parlay-btn" onclick="addRecommendedToParlay(${JSON.stringify(parlay.legs).replace(/"/g, '&quot;')}, '${parlay.name}')">
+                    ➕ Add to My Parlay
+                </button>
             </div>
         `;
     }).join('');
+}
+
+// ===== ADD RECOMMENDED PARLAY TO MY PARLAY =====
+function addRecommendedToParlay(legs, parlayName) {
+    legs.forEach(leg => {
+        const exists = selectedPicks.some(p => p.label === leg.team && p.odds === leg.odds);
+        if (!exists) {
+            selectedPicks.push({
+                gameId: leg.game || leg.team,
+                betType: 'homeML',
+                label: leg.team,
+                odds: leg.odds,
+                confidence: leg.conf
+            });
+        }
+    });
+
+    updateParlayUI();
+    renderGames();
+
+    // Open sidebar to show the picks
+    const sidebar = document.getElementById('parlay-sidebar');
+    if (sidebar && !sidebar.classList.contains('open')) {
+        toggleSidebar();
+    }
 }
 
 // ===== PARLAY BUILDER LOGIC =====
@@ -856,9 +895,13 @@ function generateMixedParlay() {
             <div class="builder-suggestion-title">🎯 Suggested ${total}-Leg Parlay</div>
             <div class="builder-suggestion-picks">
                 ${legs.map(leg => `
-                    <div class="builder-pick-chip ${chipClass(leg.tier)}" 
+                    <div class="sidebar-pick-chip ${chipClass(leg.tier)}" 
                          onclick="togglePick('${leg.gameId}', '${leg.betType}', '${leg.team}', ${leg.odds}, ${leg.confidence})">
-                        ${tierEmoji(leg.tier)} ${leg.team} (${formatOdds(leg.odds)}) · ${leg.confidence}%
+                        <span>
+                            ${tierEmoji(leg.tier)}
+                            <span class="bet-type-badge badge-ml">ML</span>
+                            ${leg.team} (${formatOdds(leg.odds)}) · ${leg.confidence}%
+                        </span>
                     </div>
                 `).join('')}
             </div>
@@ -1109,6 +1152,15 @@ function showCustomRange() {
         d.setDate(d.getDate() - 30);
         startInput.value = d.toISOString().split('T')[0];
     }
+}
+
+// ===== TOGGLE PERFORMANCE TRACKER COLLAPSE =====
+function togglePerfTracker() {
+    const content = document.getElementById('perf-tracker-content');
+    const icon = document.getElementById('perf-collapse-icon');
+    if (!content) return;
+    content.classList.toggle('collapsed');
+    if (icon) icon.classList.toggle('expanded', !content.classList.contains('collapsed'));
 }
 
 function applyCustomRange() {

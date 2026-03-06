@@ -19,21 +19,12 @@ const TARGET_SPORTS = [
     // Basketball
     { key: 'basketball_nba', title: 'NBA' },
     { key: 'basketball_ncaab', title: 'NCAAB', maxGames: 20 },
-    { key: 'basketball_wncaab', title: 'WNCAAB' },
     // Football (seasonal — will return empty when not in-season)
     { key: 'americanfootball_nfl', title: 'NFL' },
-    { key: 'americanfootball_ncaaf', title: 'NCAAF', maxGames: 20 },
     // Hockey
     { key: 'icehockey_nhl', title: 'NHL' },
     // Baseball (seasonal)
     { key: 'baseball_mlb', title: 'MLB' },
-    // Soccer (US only)
-    { key: 'soccer_usa_mls', title: 'MLS' },
-    // Tennis
-    { key: 'tennis_atp_french_open', title: 'ATP French Open' },
-    { key: 'tennis_wta_french_open', title: 'WTA French Open' },
-    // Golf
-    { key: 'golf_pga_championship_winner', title: 'PGA Tour' },
 ];
 
 async function fetchOddsForSport(sport) {

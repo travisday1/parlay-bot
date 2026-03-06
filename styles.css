@@ -2147,6 +2147,88 @@ body.sidebar-open #app-wrapper {
     background: rgba(255, 255, 255, 0.04);
 }
 
+/* ===== LAST UPDATED HEADER ===== */
+.last-updated {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-glass);
+}
+
+.update-icon {
+    font-size: 0.9rem;
+}
+
+/* ===== COLLAPSIBLE PERFORMANCE TRACKER ===== */
+.perf-collapse-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    transition: background 0.2s ease;
+    padding: 16px 20px;
+    border-radius: var(--radius-md);
+    margin-bottom: 0;
+}
+
+.perf-collapse-header:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.collapse-icon {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+}
+
+.collapse-icon.expanded {
+    transform: rotate(90deg);
+}
+
+.perf-content {
+    overflow: hidden;
+    max-height: 2000px;
+    transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
+    opacity: 1;
+    padding-top: 16px;
+}
+
+.perf-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    overflow: hidden;
+}
+
+/* ===== RECOMMENDED PARLAY ADD BUTTON ===== */
+.rec-add-parlay-btn {
+    width: 100%;
+    padding: 10px;
+    margin-top: 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(59, 130, 246, 0.2));
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    letter-spacing: 0.3px;
+}
+
+.rec-add-parlay-btn:hover {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.35), rgba(59, 130, 246, 0.35));
+    border-color: rgba(34, 197, 94, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+}
+
 .pick-conf.conf-high {
     color: var(--accent-green) !important;
     background: rgba(34, 197, 94, 0.1);
