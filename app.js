@@ -524,22 +524,43 @@ function transformParlays(parlays) {
 
     return parlays
         .sort((a, b) => (tierOrder[a.tier] || 99) - (tierOrder[b.tier] || 99))
-        .map(p => ({
-            name: p.name || tierName[p.tier] || p.tier,
-            tier: tierClass[p.tier] || p.tier,
-            badge: tierBadge[p.tier] || p.tier,
-            legs: (p.legs || []).map(leg => {
+        .map(p => {
+            // Map legs and filter out any where the game isn't in our analyzed GAMES array
+            const validLegs = (p.legs || []).map(leg => {
                 const teamName = leg.picked_team || leg.team || '?';
                 const realConf = lookupConfidence(teamName, leg.odds, leg.game);
+                if (realConf === null) return null; // Game not in GAMES — skip this leg
                 return {
                     team: teamName,
                     odds: leg.odds || -110,
-                    conf: realConf !== null ? realConf : (leg.confidence || p.confidence || 50),
+                    conf: realConf,
                     game: leg.game || '',
                 };
-            }),
-            rationale: p.rationale || 'AI-generated parlay combination.',
-        }));
+            }).filter(Boolean);
+
+            // Recalculate badge based on actual leg confidences, not AI's raw tier
+            const minConf = validLegs.length > 0 ? Math.min(...validLegs.map(l => l.conf)) : 0;
+            let recalcTier, recalcBadge;
+            if (minConf >= 75) {
+                recalcTier = 'lock';
+                recalcBadge = 'Highest Confidence';
+            } else if (minConf >= 60) {
+                recalcTier = 'strong';
+                recalcBadge = 'Best Value';
+            } else {
+                recalcTier = 'value';
+                recalcBadge = 'High Risk / High Reward';
+            }
+
+            return {
+                name: p.name || tierName[p.tier] || p.tier,
+                tier: recalcTier,
+                badge: recalcBadge,
+                legs: validLegs,
+                rationale: p.rationale || 'AI-generated parlay combination.',
+            };
+        })
+        .filter(p => p.legs.length >= 2); // Drop parlays with fewer than 2 valid legs
 }
 
 // ===== HELPER FUNCTIONS =====
