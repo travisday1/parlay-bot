@@ -522,8 +522,7 @@ function transformParlays(parlays) {
         return Math.max(matchedGame.confidence.homeML, matchedGame.confidence.awayML);
     }
 
-    return parlays
-        .sort((a, b) => (tierOrder[a.tier] || 99) - (tierOrder[b.tier] || 99))
+    const processed = parlays
         .map(p => {
             // Map legs and filter out any where the game isn't in our analyzed GAMES array
             const validLegs = (p.legs || []).map(leg => {
@@ -538,29 +537,31 @@ function transformParlays(parlays) {
                 };
             }).filter(Boolean);
 
-            // Recalculate badge based on actual leg confidences, not AI's raw tier
+            // Recalculate quality from actual leg confidences
             const minConf = validLegs.length > 0 ? Math.min(...validLegs.map(l => l.conf)) : 0;
-            let recalcTier, recalcBadge;
-            if (minConf >= 75) {
-                recalcTier = 'lock';
-                recalcBadge = 'Highest Confidence';
-            } else if (minConf >= 60) {
-                recalcTier = 'strong';
-                recalcBadge = 'Best Value';
-            } else {
-                recalcTier = 'value';
-                recalcBadge = 'High Risk / High Reward';
-            }
 
             return {
-                name: p.name || tierName[p.tier] || p.tier,
-                tier: recalcTier,
-                badge: recalcBadge,
+                originalName: p.name,
+                minConf,
                 legs: validLegs,
                 rationale: p.rationale || 'AI-generated parlay combination.',
             };
         })
-        .filter(p => p.legs.length >= 2); // Drop parlays with fewer than 2 valid legs
+        .filter(p => p.legs.length >= 2) // Drop parlays with fewer than 2 valid legs
+        .sort((a, b) => b.minConf - a.minConf); // Best (highest min confidence) first
+
+    // Assign names and badges by RANK (not by AI's original tier)
+    const rankNames = ['🔒 The Safe Bag', '⚡ The Value Play', '🎲 The Big Swing'];
+    const rankBadges = ['Highest Confidence', 'Best Value', 'High Risk / High Reward'];
+    const rankTiers = ['lock', 'strong', 'value'];
+
+    return processed.map((p, i) => ({
+        name: rankNames[i] || p.originalName,
+        tier: rankTiers[i] || 'value',
+        badge: rankBadges[i] || 'AI Parlay',
+        legs: p.legs,
+        rationale: p.rationale,
+    }));
 }
 
 // ===== HELPER FUNCTIONS =====
