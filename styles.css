@@ -1798,7 +1798,11 @@ body.sidebar-open #app-wrapper {
 .sidebar-picks {
     flex: 1;
     min-height: 60px;
+    max-height: calc(100vh - 380px);
+    overflow-y: auto;
     margin-bottom: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
 }
 
 .sidebar-picks .empty-slip {
