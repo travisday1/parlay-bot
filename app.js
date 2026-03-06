@@ -208,29 +208,75 @@ function transformGames(games, picks) {
         const spreadFavTeam = homeSpread < 0 ? abbreviate(game.home_team) : abbreviate(game.away_team);
         const spreadFavValue = Math.min(homeSpread, awaySpread);
 
-        // Derive confidence from the pick
-        const pickConf = pick?.confidence || 50;
-        const homeML = odds.home_odds || -150;
-        const awayML = odds.away_odds || +130;
-        const homeIsFav = homeML < awayML;
+        // === INDEPENDENT CONFIDENCE CALCULATION ===
+        // Each bet type gets its own realistic probability
 
-        // Distribute confidence based on who the AI picked
-        let awayMLConf = 50, homeMLConf = 50;
-        if (pick) {
+        // 1. MONEYLINE: Use implied probability from the actual odds
+        //    -800 → ~89%, -150 → ~60%, +130 → ~43%, +300 → ~25%
+        function impliedProb(americanOdds) {
+            if (!americanOdds || americanOdds === 0) return 50;
+            if (americanOdds < 0) return Math.round(Math.abs(americanOdds) / (Math.abs(americanOdds) + 100) * 100);
+            return Math.round(100 / (americanOdds + 100) * 100);
+        }
+
+        let homeMLConf = impliedProb(homeML);
+        let awayMLConf = impliedProb(awayML);
+
+        // If AI picked a team on the moneyline, blend AI confidence with implied odds
+        if (pick && (pick.pick_type === 'moneyline')) {
             if (pick.picked_team === game.home_team) {
-                homeMLConf = pickConf;
-                awayMLConf = 100 - pickConf;
+                homeMLConf = Math.round((homeMLConf + pickConf) / 2); // blend implied + AI
+                awayMLConf = 100 - homeMLConf;
             } else if (pick.picked_team === game.away_team) {
-                awayMLConf = pickConf;
-                homeMLConf = 100 - pickConf;
+                awayMLConf = Math.round((awayMLConf + pickConf) / 2);
+                homeMLConf = 100 - awayMLConf;
+            }
+        }
+
+        // 2. SPREAD: AI's confidence that each team covers the spread
+        //    When AI directly picks spread → use its confidence
+        //    When AI picks ML → derive spread confidence (covering a spread is harder than winning outright)
+        //    Formula: compress the AI's ML edge toward 50%: spreadConf = 50 + (mlConf - 50) * 0.35
+        //    Examples: 80% ML → ~60% spread, 65% ML → ~55% spread, 50% ML → 50% spread
+        let homeSpreadConf, awaySpreadConf;
+
+        if (pick && pick.pick_type === 'spread') {
+            // AI directly analyzed the spread — use its confidence
+            if (pick.picked_team === game.home_team) {
+                homeSpreadConf = pickConf;
+                awaySpreadConf = 100 - pickConf;
+            } else if (pick.picked_team === game.away_team) {
+                awaySpreadConf = pickConf;
+                homeSpreadConf = 100 - pickConf;
             } else {
-                // Pick is spread or total
-                homeMLConf = homeIsFav ? 60 : 40;
-                awayMLConf = homeIsFav ? 40 : 60;
+                homeSpreadConf = 52;
+                awaySpreadConf = 48;
             }
         } else {
-            homeMLConf = homeIsFav ? 60 : 40;
-            awayMLConf = homeIsFav ? 40 : 60;
+            // Derive from AI's ML confidence — compress edge toward 50%
+            homeSpreadConf = Math.round(50 + (homeMLConf - 50) * 0.35);
+            awaySpreadConf = Math.round(50 + (awayMLConf - 50) * 0.35);
+        }
+        // Use the favorite's spread confidence as the primary "spread" confidence
+        const spreadConf = homeSpread < 0 ? homeSpreadConf : awaySpreadConf;
+
+        // 3. OVER/UNDER: AI's confidence on the total
+        //    When AI directly picks O/U → use its confidence
+        //    Otherwise → derive from implied odds with slight adjustment
+        let overConf, underConf;
+        const overOddsVal = odds.over_odds || -110;
+        const underOddsVal = odds.under_odds || -110;
+
+        if (pick && pick.pick_type === 'over') {
+            overConf = pickConf;
+            underConf = 100 - pickConf;
+        } else if (pick && pick.pick_type === 'under') {
+            underConf = pickConf;
+            overConf = 100 - pickConf;
+        } else {
+            // No AI O/U pick — use implied probability from the odds
+            overConf = impliedProb(overOddsVal);
+            underConf = impliedProb(underOddsVal);
         }
 
         const gameTime = new Date(game.commence_time).toLocaleTimeString('en-US', {
@@ -253,16 +299,18 @@ function transformGames(games, picks) {
             confidence: {
                 awayML: awayMLConf,
                 homeML: homeMLConf,
-                spread: pick?.pick_type === 'spread' ? pickConf : 50,
-                over: pick?.pick_type === 'over' ? pickConf : 50,
-                under: pick?.pick_type === 'under' ? pickConf : 50,
+                spread: spreadConf,
+                spreadHome: homeSpreadConf,
+                spreadAway: awaySpreadConf,
+                over: overConf,
+                under: underConf,
             },
             pick: pick ? {
                 team: abbreviate(pick.picked_team),
                 type: pick.pick_type.toUpperCase(),
                 reason: pick.rationale || 'AI analysis pending.'
             } : {
-                team: homeIsFav ? abbreviate(game.home_team) : abbreviate(game.away_team),
+                team: homeMLConf > awayMLConf ? abbreviate(game.home_team) : abbreviate(game.away_team),
                 type: 'ML',
                 reason: 'No detailed AI analysis available for this game yet.'
             },
@@ -380,11 +428,11 @@ function transformParlays(parlays) {
             (awayCity && cleanTeam.includes(awayCity));
 
         if (isHome) {
-            if (isSpread) return matchedGame.confidence.spread || matchedGame.confidence.homeML;
+            if (isSpread) return matchedGame.confidence.spreadHome || matchedGame.confidence.spread || 52;
             return matchedGame.confidence.homeML;
         }
         if (isAway) {
-            if (isSpread) return matchedGame.confidence.spread || matchedGame.confidence.awayML;
+            if (isSpread) return matchedGame.confidence.spreadAway || matchedGame.confidence.spread || 52;
             return matchedGame.confidence.awayML;
         }
 
