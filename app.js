@@ -1170,37 +1170,123 @@ function renderPerformanceTable(lockStats, valueStats, longshotStats) {
     renderPerformanceTableRow('total', totalStats);
 }
 
-async function refreshPerformance(startDate, endDate) {
-    const results = await loadPerformanceData(startDate, endDate);
+// ===== PARLAY-LEVEL PERFORMANCE DATA =====
+async function loadParlayPerformanceData(startDate, endDate) {
+    try {
+        const { data: parlays, error } = await sb
+            .from('recommended_parlays')
+            .select('*')
+            .gte('parlay_date', startDate)
+            .lte('parlay_date', endDate)
+            .neq('result', 'pending');
 
+        if (error) {
+            console.error('Error loading parlay performance:', error);
+            return [];
+        }
+        return parlays || [];
+    } catch (e) {
+        console.error('Parlay performance error:', e);
+        return [];
+    }
+}
+
+function calculateParlayTierStats(parlays, tier) {
+    // Map table tiers to recommended_parlays tier values
+    const tierMap = { lock: 'safe', value: 'value', longshot: 'longshot' };
+    const matchTier = tierMap[tier] || tier;
+    const tierParlays = parlays.filter(p => p.tier === matchTier);
+
+    if (tierParlays.length === 0) {
+        return { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0, totalWagered: 0, totalPayout: 0, avgConfidence: 0 };
+    }
+
+    let wins = 0, losses = 0;
+    let totalPayout = 0;
+    let totalConfidence = 0;
+    let confCount = 0;
+
+    for (const p of tierParlays) {
+        if (p.result === 'win') {
+            wins++;
+            totalPayout += parseFloat(p.actual_payout) || parseFloat(p.payout_on_100) || 0;
+        } else if (p.result === 'loss') {
+            losses++;
+        }
+        const conf = parseFloat(p.confidence);
+        if (!isNaN(conf)) {
+            totalConfidence += conf;
+            confCount++;
+        }
+    }
+
+    const total = wins + losses;
+    const totalWagered = total * 100; // $100 per parlay
+    const profit = totalPayout - totalWagered;
+    const winRate = total > 0 ? (wins / total) * 100 : 0;
+    const roi = totalWagered > 0 ? (profit / totalWagered) * 100 : 0;
+    const avgConfidence = confCount > 0 ? totalConfidence / confCount : 0;
+
+    return { wins, losses, pushes: 0, total, winRate, profit, roi, totalWagered, totalPayout, avgConfidence };
+}
+
+async function refreshPerformance(startDate, endDate) {
     const emptyMsg = document.getElementById('perf-empty');
+    // Always hide cards, table only
     const cardsGrid = document.querySelector('.perf-cards-grid');
+    if (cardsGrid) cardsGrid.style.display = 'none';
 
     const emptyStats = { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0, totalWagered: 0, totalPayout: 0, avgConfidence: 0 };
 
-    if (results.length === 0) {
-        if (emptyMsg) emptyMsg.style.display = 'block';
-        if (cardsGrid) cardsGrid.style.display = 'none';
-        renderPerformanceCard('lock', emptyStats);
-        renderPerformanceCard('value', emptyStats);
-        renderPerformanceCard('longshot', emptyStats);
-        renderPerformanceTable(emptyStats, emptyStats, emptyStats);
-        return;
+    if (currentPerfView === 'parlay') {
+        // Parlay-level stats from recommended_parlays
+        const parlays = await loadParlayPerformanceData(startDate, endDate);
+
+        if (parlays.length === 0) {
+            if (emptyMsg) emptyMsg.style.display = 'block';
+            renderPerformanceTable(emptyStats, emptyStats, emptyStats);
+            return;
+        }
+
+        if (emptyMsg) emptyMsg.style.display = 'none';
+
+        const lockStats = calculateParlayTierStats(parlays, 'lock');
+        const valueStats = calculateParlayTierStats(parlays, 'value');
+        const longshotStats = calculateParlayTierStats(parlays, 'longshot');
+
+        // Update cards (kept for future)
+        renderPerformanceCard('lock', lockStats);
+        renderPerformanceCard('value', valueStats);
+        renderPerformanceCard('longshot', longshotStats);
+        renderPerformanceTable(lockStats, valueStats, longshotStats);
+
+        console.log(`📈 Parlay performance loaded: ${parlays.length} settled parlays in range`);
+    } else {
+        // Individual game stats from pick_results
+        const results = await loadPerformanceData(startDate, endDate);
+
+        if (results.length === 0) {
+            if (emptyMsg) emptyMsg.style.display = 'block';
+            renderPerformanceCard('lock', emptyStats);
+            renderPerformanceCard('value', emptyStats);
+            renderPerformanceCard('longshot', emptyStats);
+            renderPerformanceTable(emptyStats, emptyStats, emptyStats);
+            return;
+        }
+
+        if (emptyMsg) emptyMsg.style.display = 'none';
+
+        const lockStats = calculateTierStats(results, 'lock');
+        const valueStats = calculateTierStats(results, 'value');
+        const longshotStats = calculateTierStats(results, 'longshot');
+
+        renderPerformanceCard('lock', lockStats);
+        renderPerformanceCard('value', valueStats);
+        renderPerformanceCard('longshot', longshotStats);
+        renderPerformanceTable(lockStats, valueStats, longshotStats);
+
+        console.log(`📈 Individual performance loaded: ${results.length} settled picks in range`);
     }
-
-    if (emptyMsg) emptyMsg.style.display = 'none';
-    if (cardsGrid) cardsGrid.style.display = 'grid';
-
-    const lockStats = calculateTierStats(results, 'lock');
-    const valueStats = calculateTierStats(results, 'value');
-    const longshotStats = calculateTierStats(results, 'longshot');
-
-    renderPerformanceCard('lock', lockStats);
-    renderPerformanceCard('value', valueStats);
-    renderPerformanceCard('longshot', longshotStats);
-    renderPerformanceTable(lockStats, valueStats, longshotStats);
-
-    console.log(`📈 Performance loaded: ${results.length} settled picks in range`);
 }
 
 function getDateRange(days) {
@@ -1375,7 +1461,9 @@ function setPerfView(view) {
     document.querySelectorAll('.perf-view-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.view === view);
     });
-    // Future: toggle between individual game stats and parlay-level stats
+    // Re-load performance data with the current date range and new view
+    const { startDate, endDate } = getDateRange(currentPerfRange);
+    refreshPerformance(startDate, endDate);
 }
 
 // ===== SAVE PARLAY (localStorage Foundation) =====
