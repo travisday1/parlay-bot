@@ -991,7 +991,7 @@ async function loadPerformanceData(startDate, endDate) {
         // Query pick_results joined with daily_picks to get tier info
         const { data: results, error } = await sb
             .from('pick_results')
-            .select('*, daily_picks!inner(tier, pick_date, picked_odds, pick_type, picked_team)')
+            .select('*, daily_picks!inner(tier, pick_date, picked_odds, pick_type, picked_team, confidence)')
             .gte('daily_picks.pick_date', startDate)
             .lte('daily_picks.pick_date', endDate);
 
@@ -1043,11 +1043,13 @@ function calculateTierStats(results, tier) {
     });
 
     if (tierResults.length === 0) {
-        return { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0, totalWagered: 0 };
+        return { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0, totalWagered: 0, totalPayout: 0, avgConfidence: 0 };
     }
 
     let wins = 0, losses = 0, pushes = 0;
     let totalPayout = 0;
+    let totalConfidence = 0;
+    let confCount = 0;
 
     for (const r of tierResults) {
         if (r.result === 'win') {
@@ -1060,6 +1062,11 @@ function calculateTierStats(results, tier) {
             pushes++;
             totalPayout += 100; // stake returned
         }
+        const conf = parseFloat(r.daily_picks?.confidence);
+        if (!isNaN(conf)) {
+            totalConfidence += conf;
+            confCount++;
+        }
     }
 
     const total = wins + losses + pushes;
@@ -1067,8 +1074,9 @@ function calculateTierStats(results, tier) {
     const profit = totalPayout - totalWagered;
     const winRate = total > 0 ? (wins / (wins + losses)) * 100 : 0;
     const roi = totalWagered > 0 ? (profit / totalWagered) * 100 : 0;
+    const avgConfidence = confCount > 0 ? totalConfidence / confCount : 0;
 
-    return { wins, losses, pushes, total, winRate, profit, roi, totalWagered };
+    return { wins, losses, pushes, total, winRate, profit, roi, totalWagered, totalPayout, avgConfidence };
 }
 
 function renderPerformanceCard(prefix, stats) {
@@ -1107,19 +1115,76 @@ function renderPerformanceCard(prefix, stats) {
     barEl.style.width = `${Math.min(stats.winRate, 100)}%`;
 }
 
+function renderPerformanceTableRow(prefix, stats) {
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    set(`perf-${prefix}-wagers`, stats.total > 0 ? stats.total : '—');
+    set(`perf-${prefix}-wagered`, stats.total > 0 ? `$${stats.totalWagered.toLocaleString()}` : '—');
+    set(`perf-${prefix}-payout`, stats.total > 0 ? `$${stats.totalPayout.toFixed(0)}` : '—');
+
+    const profitEl = document.getElementById(`perf-${prefix}-profit`);
+    if (profitEl) {
+        if (stats.total > 0) {
+            const sign = stats.profit >= 0 ? '+' : '';
+            profitEl.textContent = `${sign}$${stats.profit.toFixed(0)}`;
+            profitEl.className = `perf-profit ${stats.profit >= 0 ? 'positive' : 'negative'}`;
+        } else {
+            profitEl.textContent = '—';
+            profitEl.className = 'perf-profit';
+        }
+    }
+
+    set(`perf-${prefix}-winrate`, stats.total > 0 ? `${stats.winRate.toFixed(1)}%` : '—');
+    set(`perf-${prefix}-confidence`, stats.avgConfidence > 0 ? `${stats.avgConfidence.toFixed(0)}%` : '—');
+}
+
+function renderPerformanceTable(lockStats, valueStats, longshotStats) {
+    renderPerformanceTableRow('lock', lockStats);
+    renderPerformanceTableRow('value', valueStats);
+    renderPerformanceTableRow('longshot', longshotStats);
+
+    // Compute totals
+    const totalStats = {
+        total: lockStats.total + valueStats.total + longshotStats.total,
+        totalWagered: lockStats.totalWagered + valueStats.totalWagered + longshotStats.totalWagered,
+        totalPayout: lockStats.totalPayout + valueStats.totalPayout + longshotStats.totalPayout,
+        profit: lockStats.profit + valueStats.profit + longshotStats.profit,
+        winRate: 0,
+        avgConfidence: 0,
+    };
+
+    const totalWins = lockStats.wins + valueStats.wins + longshotStats.wins;
+    const totalLosses = lockStats.losses + valueStats.losses + longshotStats.losses;
+    totalStats.winRate = (totalWins + totalLosses) > 0
+        ? (totalWins / (totalWins + totalLosses)) * 100 : 0;
+
+    // Weighted average confidence
+    const confSum = (lockStats.avgConfidence * lockStats.total)
+        + (valueStats.avgConfidence * valueStats.total)
+        + (longshotStats.avgConfidence * longshotStats.total);
+    totalStats.avgConfidence = totalStats.total > 0 ? confSum / totalStats.total : 0;
+
+    renderPerformanceTableRow('total', totalStats);
+}
+
 async function refreshPerformance(startDate, endDate) {
     const results = await loadPerformanceData(startDate, endDate);
 
     const emptyMsg = document.getElementById('perf-empty');
     const cardsGrid = document.querySelector('.perf-cards-grid');
 
+    const emptyStats = { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0, totalWagered: 0, totalPayout: 0, avgConfidence: 0 };
+
     if (results.length === 0) {
         if (emptyMsg) emptyMsg.style.display = 'block';
         if (cardsGrid) cardsGrid.style.display = 'none';
-        // Show placeholder stats
-        renderPerformanceCard('lock', { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0 });
-        renderPerformanceCard('value', { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0 });
-        renderPerformanceCard('longshot', { wins: 0, losses: 0, pushes: 0, total: 0, winRate: 0, profit: 0, roi: 0 });
+        renderPerformanceCard('lock', emptyStats);
+        renderPerformanceCard('value', emptyStats);
+        renderPerformanceCard('longshot', emptyStats);
+        renderPerformanceTable(emptyStats, emptyStats, emptyStats);
         return;
     }
 
@@ -1133,6 +1198,7 @@ async function refreshPerformance(startDate, endDate) {
     renderPerformanceCard('lock', lockStats);
     renderPerformanceCard('value', valueStats);
     renderPerformanceCard('longshot', longshotStats);
+    renderPerformanceTable(lockStats, valueStats, longshotStats);
 
     console.log(`📈 Performance loaded: ${results.length} settled picks in range`);
 }
