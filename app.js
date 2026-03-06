@@ -806,12 +806,13 @@ function generateMixedParlay() {
         const bestTeam = game.confidence.homeML >= game.confidence.awayML
             ? game.home.abbr : game.away.abbr;
         const bestOdds = game.confidence.homeML >= game.confidence.awayML
-            ? game.moneyline.homeOdds : game.moneyline.awayOdds;
+            ? game.moneyline.home : game.moneyline.away;
         return {
             team: bestTeam,
             odds: bestOdds,
             confidence: bestConf,
             tier: tag.cls,
+            betType: game.confidence.homeML >= game.confidence.awayML ? 'homeML' : 'awayML',
             game: `${game.away.abbr} @ ${game.home.abbr}`,
             gameId: game.id
         };
@@ -829,7 +830,7 @@ function generateMixedParlay() {
             <div class="builder-suggestion-picks">
                 ${legs.map(leg => `
                     <div class="builder-pick-chip ${chipClass(leg.tier)}" 
-                         onclick="togglePick('${leg.gameId}', '${leg.team === GAMES.find(g => g.id === leg.gameId)?.home?.abbr ? 'homeML' : 'awayML'}', '${leg.team}', ${leg.odds}, ${leg.confidence})">
+                         onclick="togglePick('${leg.gameId}', '${leg.betType}', '${leg.team}', ${leg.odds}, ${leg.confidence})">
                         ${tierEmoji(leg.tier)} ${leg.team} (${formatOdds(leg.odds)}) · ${leg.confidence}%
                     </div>
                 `).join('')}
