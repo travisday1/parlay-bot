@@ -193,7 +193,9 @@ async function loadLiveData() {
 }
 
 function transformGames(games, picks) {
-    return games.map(game => {
+    // Only include games from leagues we support
+    const supportedGames = games.filter(game => LEAGUE_MAP[game.sport_key]);
+    return supportedGames.map(game => {
         const leagueInfo = LEAGUE_MAP[game.sport_key] || { id: game.sport_key, icon: '🏟️', label: game.sport_title || game.sport_key };
         const odds = game.odds?.[0] || {};
 
@@ -1160,7 +1162,10 @@ function togglePerfTracker() {
     const icon = document.getElementById('perf-collapse-icon');
     if (!content) return;
     content.classList.toggle('collapsed');
-    if (icon) icon.classList.toggle('expanded', !content.classList.contains('collapsed'));
+    const isExpanded = !content.classList.contains('collapsed');
+    if (icon) {
+        icon.textContent = isExpanded ? '− Collapse' : '+ Expand';
+    }
 }
 
 function applyCustomRange() {

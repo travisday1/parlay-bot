@@ -107,7 +107,14 @@ Respond in VALID JSON format only. No markdown, no explanation outside the JSON.
       "rationale": "..."
     }
   ]
-}`;
+}
+
+CRITICAL PARLAY RULES:
+1. "The Safe Bag" MUST include your 3 highest-confidence LOCK picks (75%+ confidence). These should be heavy favorites with the best chance of winning. The combined payout will be low — that's expected.
+2. "The Value Play" MUST use DIFFERENT picks than The Safe Bag. Focus on "value" tier picks (60-74% confidence) where the odds offer a better risk/reward ratio.
+3. "The Big Swing" MUST include at least one longshot pick (under 60% confidence) where the odds payout is significantly higher.
+4. NO two parlays should share the same legs. Each parlay must be a DISTINCT combination.
+5. Each parlay should have 3 legs.`;
 }
 
 function americanToDecimal(american) {

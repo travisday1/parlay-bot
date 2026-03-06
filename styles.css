@@ -2181,6 +2181,25 @@ body.sidebar-open #app-wrapper {
     background: rgba(255, 255, 255, 0.03);
 }
 
+.perf-toggle-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    margin-left: 12px;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(59, 130, 246, 0.25));
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    color: #c084fc;
+    transition: all 0.2s ease;
+}
+
+.perf-toggle-badge:hover {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(59, 130, 246, 0.35));
+}
+
 .collapse-icon {
     font-size: 0.9rem;
     color: var(--text-muted);
