@@ -309,76 +309,8 @@
             </section>
         </main>
 
-        <!-- Parlay Sidebar (Slide-out) -->
-        <aside id="parlay-sidebar" class="parlay-sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-title">
-                    <span>🎰</span>
-                    <h2>My Parlay</h2>
-                    <span id="sidebar-leg-count" class="leg-count">0 legs</span>
-                </div>
-                <button class="sidebar-close-btn" onclick="toggleSidebar()">✕</button>
-            </div>
 
-            <!-- Picks List -->
-            <div id="sidebar-picks" class="sidebar-picks">
-                <p class="empty-slip">Click picks on game cards to build your parlay</p>
-            </div>
 
-            <!-- Tier Summary -->
-            <div class="sidebar-tier-summary" id="sidebar-tier-summary">
-                <span class="tier-chip tier-lock">🔒 <span id="sidebar-lock-count">0</span></span>
-                <span class="tier-chip tier-lean">✅ <span id="sidebar-lean-count">0</span></span>
-                <span class="tier-chip tier-tossup">⚠️ <span id="sidebar-tossup-count">0</span></span>
-            </div>
-
-            <!-- Parlay Stats -->
-            <div class="sidebar-stats">
-                <div class="sidebar-stat">
-                    <span class="stat-label">Combined Odds</span>
-                    <span id="sidebar-combined-odds" class="stat-value">—</span>
-                </div>
-                <div class="sidebar-stat">
-                    <span class="stat-label">$100 Payout</span>
-                    <span id="sidebar-payout" class="stat-value payout-value">—</span>
-                </div>
-                <div class="sidebar-stat">
-                    <span class="stat-label">Confidence</span>
-                    <span id="sidebar-confidence" class="stat-value">—</span>
-                </div>
-                <div class="sidebar-conf-bar">
-                    <div id="sidebar-conf-fill" class="conf-bar-fill" style="width: 0%"></div>
-                </div>
-            </div>
-
-            <!-- Leg Mixer -->
-            <div class="sidebar-mixer">
-                <h3>🎯 Quick Build</h3>
-                <div class="mixer-controls">
-                    <div class="mixer-input">
-                        <label>🔒</label>
-                        <input type="number" id="mixer-locks" min="0" max="10" value="2" oninput="updateBuilderTotal()">
-                    </div>
-                    <div class="mixer-input">
-                        <label>✅</label>
-                        <input type="number" id="mixer-leans" min="0" max="10" value="1" oninput="updateBuilderTotal()">
-                    </div>
-                    <div class="mixer-input">
-                        <label>⚠️</label>
-                        <input type="number" id="mixer-tossups" min="0" max="10" value="0"
-                            oninput="updateBuilderTotal()">
-                    </div>
-                    <button class="mixer-gen-btn" id="mixer-gen-btn" onclick="generateMixedParlay()">Generate</button>
-                </div>
-                <div id="mixer-suggestion-area"></div>
-            </div>
-
-            <!-- Actions -->
-            <div class="sidebar-actions">
-                <button class="sidebar-save-btn" onclick="saveParlay()">💾 Save Parlay</button>
-                <button class="sidebar-clear-btn" onclick="clearParlay()">🗑️ Clear All</button>
-            </div>
-        </aside>
 
         <!-- Footer -->
         <footer>
@@ -386,6 +318,66 @@
                 results.</p>
         </footer>
     </div>
+
+    <!-- Parlay Sidebar (outside app-wrapper for fixed positioning) -->
+    <aside id="parlay-sidebar" class="parlay-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <span>🎰</span>
+                <h2>My Parlay</h2>
+                <span id="sidebar-leg-count" class="leg-count">0 legs</span>
+            </div>
+            <button class="sidebar-close-btn" onclick="toggleSidebar()">✕</button>
+        </div>
+        <div id="sidebar-picks" class="sidebar-picks">
+            <p class="empty-slip">Click picks on game cards to build your parlay</p>
+        </div>
+        <div class="sidebar-tier-summary" id="sidebar-tier-summary">
+            <span class="tier-chip tier-lock">🔒 <span id="sidebar-lock-count">0</span></span>
+            <span class="tier-chip tier-lean">✅ <span id="sidebar-lean-count">0</span></span>
+            <span class="tier-chip tier-tossup">⚠️ <span id="sidebar-tossup-count">0</span></span>
+        </div>
+        <div class="sidebar-stats">
+            <div class="sidebar-stat">
+                <span class="stat-label">Combined Odds</span>
+                <span id="sidebar-combined-odds" class="stat-value">—</span>
+            </div>
+            <div class="sidebar-stat">
+                <span class="stat-label">$100 Payout</span>
+                <span id="sidebar-payout" class="stat-value payout-value">—</span>
+            </div>
+            <div class="sidebar-stat">
+                <span class="stat-label">Confidence</span>
+                <span id="sidebar-confidence" class="stat-value">—</span>
+            </div>
+            <div class="sidebar-conf-bar">
+                <div id="sidebar-conf-fill" class="conf-bar-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="sidebar-mixer">
+            <h3>🎯 Quick Build</h3>
+            <div class="mixer-controls">
+                <div class="mixer-input">
+                    <label>🔒</label>
+                    <input type="number" id="mixer-locks" min="0" max="10" value="2" oninput="updateBuilderTotal()">
+                </div>
+                <div class="mixer-input">
+                    <label>✅</label>
+                    <input type="number" id="mixer-leans" min="0" max="10" value="1" oninput="updateBuilderTotal()">
+                </div>
+                <div class="mixer-input">
+                    <label>⚠️</label>
+                    <input type="number" id="mixer-tossups" min="0" max="10" value="0" oninput="updateBuilderTotal()">
+                </div>
+                <button class="mixer-gen-btn" id="mixer-gen-btn" onclick="generateMixedParlay()">Generate</button>
+            </div>
+            <div id="mixer-suggestion-area"></div>
+        </div>
+        <div class="sidebar-actions">
+            <button class="sidebar-save-btn" onclick="saveParlay()">💾 Save Parlay</button>
+            <button class="sidebar-clear-btn" onclick="clearParlay()">🗑️ Clear All</button>
+        </div>
+    </aside>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="app.js"></script>
