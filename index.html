@@ -336,6 +336,56 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Performance by Bet Type & Sport (collapsed by default) -->
+                    <div class="perf-breakdown-section">
+                        <div class="perf-breakdown-header" onclick="toggleBreakdownSection()">
+                            <h3 class="perf-breakdown-title">📊 Performance by Bet Type & Sport
+                                <span id="breakdown-toggle-icon" class="perf-toggle-badge">+ Expand</span>
+                            </h3>
+                        </div>
+                        <div id="perf-breakdown-content" class="perf-breakdown-body collapsed">
+                            <!-- Bet Type Table -->
+                            <h4 class="perf-sub-heading">By Bet Type</h4>
+                            <div class="perf-stats-table-wrapper">
+                                <table class="perf-stats-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Bet Type</th>
+                                            <th>Record</th>
+                                            <th>Win %</th>
+                                            <th>P&L ($100 units)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="perf-bettype-body">
+                                        <tr>
+                                            <td colspan="4" style="text-align:center;opacity:0.5;">No data yet</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Sport Table -->
+                            <h4 class="perf-sub-heading" style="margin-top:16px;">By Sport</h4>
+                            <div class="perf-stats-table-wrapper">
+                                <table class="perf-stats-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Sport</th>
+                                            <th>Record</th>
+                                            <th>Win %</th>
+                                            <th>P&L ($100 units)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="perf-sport-body">
+                                        <tr>
+                                            <td colspan="4" style="text-align:center;opacity:0.5;">No data yet</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                     <p id="perf-empty" class="perf-empty" style="display:none;">No settled picks yet. Check back after
                         games
                         are completed!</p>

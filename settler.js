@@ -321,12 +321,42 @@ async function settleParlays(allScores, gameMap) {
                 break;
             }
 
-            // Determine if this leg won (assume moneyline unless specified)
-            const isHome = isTeamMatch(leg.picked_team, matchingGame.home_team);
-            const pickedScore = isHome ? homeScore : awayScore;
-            const opponentScore = isHome ? awayScore : homeScore;
+            // Grade leg based on its actual pick_type
+            const legPickType = (leg.pick_type || 'moneyline').toLowerCase();
+            let legWon = false;
 
-            if (pickedScore <= opponentScore) {
+            if (legPickType === 'moneyline') {
+                const isHome = isTeamMatch(leg.picked_team, matchingGame.home_team);
+                const pickedScore = isHome ? homeScore : awayScore;
+                const opponentScore = isHome ? awayScore : homeScore;
+                legWon = pickedScore > opponentScore;
+
+            } else if (legPickType === 'spread') {
+                const isHome = isTeamMatch(leg.picked_team, matchingGame.home_team);
+                const pickedScore = isHome ? homeScore : awayScore;
+                const opponentScore = isHome ? awayScore : homeScore;
+                const line = parseFloat(leg.picked_line) || 0;
+                const adjustedScore = pickedScore + line;
+                if (adjustedScore === opponentScore) {
+                    // Push — no action on this leg, skip without busting the parlay
+                    continue;
+                }
+                legWon = adjustedScore > opponentScore;
+
+            } else if (legPickType === 'over') {
+                const line = parseFloat(leg.picked_line) || 0;
+                const total = homeScore + awayScore;
+                if (total === line) continue; // Push
+                legWon = total > line;
+
+            } else if (legPickType === 'under') {
+                const line = parseFloat(leg.picked_line) || 0;
+                const total = homeScore + awayScore;
+                if (total === line) continue; // Push
+                legWon = total < line;
+            }
+
+            if (!legWon) {
                 parlayWin = false;
             }
         }

@@ -1686,7 +1686,7 @@ async function loadPerformanceData(startDate, endDate) {
         // Query pick_results joined with daily_picks to get tier info
         const { data: results, error } = await sb
             .from('pick_results')
-            .select('*, daily_picks!inner(tier, pick_date, picked_odds, pick_type, picked_team, confidence)')
+            .select('*, daily_picks!inner(tier, pick_date, picked_odds, pick_type, picked_team, confidence, game_id)')
             .gte('daily_picks.pick_date', startDate)
             .lte('daily_picks.pick_date', endDate);
 
@@ -1707,7 +1707,7 @@ async function loadPerformanceFallback(startDate, endDate) {
     // Fallback: query both tables and join client-side
     const { data: picks } = await sb
         .from('daily_picks')
-        .select('id, tier, pick_date, picked_odds')
+        .select('id, tier, pick_date, picked_odds, pick_type, game_id')
         .gte('pick_date', startDate)
         .lte('pick_date', endDate);
 
@@ -1980,8 +1980,142 @@ async function refreshPerformance(startDate, endDate) {
         renderPerformanceCard('longshot', longshotStats);
         renderPerformanceTable(lockStats, valueStats, longshotStats);
 
+        // Calculate and render bet type & sport breakdowns
+        const { betTypeStats, sportStats } = await calculateBreakdownStats(results);
+        renderBreakdownTables(betTypeStats, sportStats);
+
         console.log(`📈 Individual performance loaded: ${results.length} settled picks in range`);
     }
+}
+
+// ===== BET TYPE & SPORT BREAKDOWN =====
+const SPORT_LABELS = {
+    basketball_nba: 'NBA',
+    basketball_ncaab: 'NCAAB',
+    icehockey_nhl: 'NHL',
+    baseball_mlb: 'MLB',
+    americanfootball_nfl: 'NFL',
+};
+
+const BET_TYPE_LABELS = {
+    moneyline: '💰 Moneyline',
+    spread: '📏 Spread',
+    over: '⬆️ Over',
+    under: '⬇️ Under',
+};
+
+async function calculateBreakdownStats(results) {
+    const betTypeStats = {};
+    const sportStats = {};
+
+    // Collect game_ids to look up sport_key
+    const gameIds = [...new Set(
+        results.map(r => r.daily_picks?.game_id || r.game_id).filter(Boolean)
+    )];
+
+    // Look up sport keys from games table
+    let gameMap = {};
+    if (gameIds.length > 0) {
+        // Query in batches
+        for (let i = 0; i < gameIds.length; i += 100) {
+            const batch = gameIds.slice(i, i + 100);
+            const { data: games } = await sb
+                .from('games')
+                .select('game_id, sport_key')
+                .in('game_id', batch);
+            (games || []).forEach(g => { gameMap[g.game_id] = g.sport_key; });
+        }
+    }
+
+    for (const r of results) {
+        const pickType = (r.daily_picks?.pick_type || 'unknown').toLowerCase();
+        const gameId = r.daily_picks?.game_id || r.game_id;
+        const sportKey = gameMap[gameId] || 'unknown';
+        const result = r.result;
+        const payout = parseFloat(r.payout_on_100) || 0;
+
+        // Bet type aggregation
+        if (!betTypeStats[pickType]) {
+            betTypeStats[pickType] = { wins: 0, losses: 0, pushes: 0, pnl: 0 };
+        }
+        if (result === 'win') { betTypeStats[pickType].wins++; betTypeStats[pickType].pnl += (payout - 100); }
+        else if (result === 'loss') { betTypeStats[pickType].losses++; betTypeStats[pickType].pnl -= 100; }
+        else if (result === 'push') { betTypeStats[pickType].pushes++; }
+
+        // Sport aggregation
+        if (!sportStats[sportKey]) {
+            sportStats[sportKey] = { wins: 0, losses: 0, pushes: 0, pnl: 0 };
+        }
+        if (result === 'win') { sportStats[sportKey].wins++; sportStats[sportKey].pnl += (payout - 100); }
+        else if (result === 'loss') { sportStats[sportKey].losses++; sportStats[sportKey].pnl -= 100; }
+        else if (result === 'push') { sportStats[sportKey].pushes++; }
+    }
+
+    return { betTypeStats, sportStats };
+}
+
+function breakdownWinRate(stats) {
+    const decided = stats.wins + stats.losses;
+    if (decided === 0) return null;
+    return Math.round((stats.wins / decided) * 100);
+}
+
+function renderBreakdownTables(betTypeStats, sportStats) {
+    const betTypeBody = document.getElementById('perf-bettype-body');
+    const sportBody = document.getElementById('perf-sport-body');
+    if (!betTypeBody || !sportBody) return;
+
+    // Render bet type rows
+    const btOrder = ['moneyline', 'spread', 'over', 'under'];
+    const btRows = btOrder
+        .filter(bt => betTypeStats[bt] && (betTypeStats[bt].wins + betTypeStats[bt].losses + betTypeStats[bt].pushes) > 0)
+        .map(bt => {
+            const s = betTypeStats[bt];
+            const wr = breakdownWinRate(s);
+            const wrClass = wr === null ? '' : wr >= 55 ? 'positive' : wr < 45 ? 'negative' : 'neutral';
+            const pnlClass = s.pnl >= 0 ? 'positive' : 'negative';
+            const pnlStr = s.pnl >= 0 ? `+$${s.pnl.toFixed(0)}` : `-$${Math.abs(s.pnl).toFixed(0)}`;
+            return `<tr>
+                <td>${BET_TYPE_LABELS[bt] || bt}</td>
+                <td>${s.wins}-${s.losses}${s.pushes > 0 ? `-${s.pushes}` : ''}</td>
+                <td class="perf-profit ${wrClass}">${wr !== null ? wr + '%' : '—'}</td>
+                <td class="perf-profit ${pnlClass}">${pnlStr}</td>
+            </tr>`;
+        });
+    betTypeBody.innerHTML = btRows.length > 0
+        ? btRows.join('')
+        : '<tr><td colspan="4" style="text-align:center;opacity:0.5;">No data yet</td></tr>';
+
+    // Render sport rows (sorted by total picks descending)
+    const sportEntries = Object.entries(sportStats)
+        .filter(([, s]) => (s.wins + s.losses + s.pushes) > 0)
+        .sort((a, b) => (b[1].wins + b[1].losses + b[1].pushes) - (a[1].wins + a[1].losses + a[1].pushes));
+
+    const spRows = sportEntries.map(([key, s]) => {
+        const label = SPORT_LABELS[key] || key;
+        const wr = breakdownWinRate(s);
+        const wrClass = wr === null ? '' : wr >= 55 ? 'positive' : wr < 45 ? 'negative' : 'neutral';
+        const pnlClass = s.pnl >= 0 ? 'positive' : 'negative';
+        const pnlStr = s.pnl >= 0 ? `+$${s.pnl.toFixed(0)}` : `-$${Math.abs(s.pnl).toFixed(0)}`;
+        return `<tr>
+            <td>${label}</td>
+            <td>${s.wins}-${s.losses}${s.pushes > 0 ? `-${s.pushes}` : ''}</td>
+            <td class="perf-profit ${wrClass}">${wr !== null ? wr + '%' : '—'}</td>
+            <td class="perf-profit ${pnlClass}">${pnlStr}</td>
+        </tr>`;
+    });
+    sportBody.innerHTML = spRows.length > 0
+        ? spRows.join('')
+        : '<tr><td colspan="4" style="text-align:center;opacity:0.5;">No data yet</td></tr>';
+}
+
+function toggleBreakdownSection() {
+    const content = document.getElementById('perf-breakdown-content');
+    const icon = document.getElementById('breakdown-toggle-icon');
+    if (!content) return;
+    const isCollapsed = content.classList.contains('collapsed');
+    content.classList.toggle('collapsed');
+    if (icon) icon.textContent = isCollapsed ? '− Collapse' : '+ Expand';
 }
 
 function getDateRange(days) {

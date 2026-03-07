@@ -2229,6 +2229,61 @@ body.sidebar-open #app-wrapper {
     overflow: hidden;
 }
 
+/* Bet Type & Sport Breakdown */
+.perf-breakdown-section {
+    margin-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 8px;
+}
+
+.perf-breakdown-header {
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 10px;
+    transition: background 0.2s;
+}
+
+.perf-breakdown-header:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.perf-breakdown-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.perf-breakdown-body {
+    overflow: hidden;
+    max-height: 1000px;
+    transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
+    opacity: 1;
+    padding-top: 12px;
+}
+
+.perf-breakdown-body.collapsed {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    overflow: hidden;
+}
+
+.perf-sub-heading {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 0 8px 0;
+}
+
+.perf-profit.neutral {
+    color: #fbbf24;
+}
+
 /* ===== RECOMMENDED PARLAY ADD BUTTON ===== */
 .rec-add-parlay-btn {
     width: 100%;

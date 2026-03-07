@@ -397,6 +397,7 @@ async function runFullAnalysis() {
                             sport: sportTitle,
                             team: pick.picked_team,
                             type: pick.pick_type,
+                            picked_line: pick.picked_line || 0,
                             odds: pick.picked_odds,
                             confidence: pick.confidence,
                             tier: pick.tier,
@@ -439,7 +440,7 @@ async function runFullAnalysis() {
 // ===== CROSS-SPORT PARLAY BUILDER =====
 async function buildCrossSportParlays(allPicks) {
     const pickSummary = allPicks.map((p, i) =>
-        `${i + 1}. [${p.sport}] ${p.team} ${p.type} @ ${p.odds > 0 ? '+' : ''}${p.odds} — ${p.confidence}% (${p.tier}) — ${p.game}`
+        `${i + 1}. [${p.sport}] ${p.team} ${p.type}${p.picked_line ? ` (line: ${p.picked_line})` : ''} @ ${p.odds > 0 ? '+' : ''}${p.odds} — ${p.confidence}% (${p.tier}) — ${p.game}`
     ).join('\n');
 
     const prompt = `You are the Parlay Bot. You have analyzed today's games across multiple sports and identified these picks:
@@ -465,7 +466,7 @@ Respond in VALID JSON only:
       "tier": "safe",
       "name": "The Safe Bag",
       "legs": [
-        {"picked_team": "Team ML", "odds": -200, "game": "Away @ Home"}
+        {"picked_team": "Team ML", "pick_type": "moneyline", "picked_line": 0, "odds": -200, "game": "Away @ Home"}
       ],
       "rationale": "Why this combination works across sports"
     }
@@ -491,8 +492,10 @@ Respond in VALID JSON only:
 
         // Look up confidence for each leg from our picks
         const legConfs = parlay.legs.map(leg => {
+            const legTeam = (leg.picked_team || '').toLowerCase().replace(/ ml$/i, '');
+            if (!legTeam) return 50;
             const match = allPicks.find(p =>
-                p.team.toLowerCase() === (leg.picked_team || '').toLowerCase().replace(/ ml$/i, '')
+                p.team && p.team.toLowerCase() === legTeam
             );
             return match ? match.confidence : 50;
         });
