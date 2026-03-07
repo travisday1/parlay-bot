@@ -16,6 +16,10 @@ try {
     console.warn('Supabase client not loaded, falling back to REST API');
 }
 
+// ===== SITE OWNER / ADMIN OVERRIDE =====
+// These user IDs always get full admin + pro access regardless of DB or RLS state
+const SITE_ADMINS = ['f4128156-bc33-475c-b715-30120b0fb35b'];
+
 // ===== AUTH STATE =====
 let currentUser = null;
 let userProfile = null;
@@ -155,10 +159,14 @@ async function loadUserProfile() {
 
 // ===== AUTH: Tier Helpers =====
 function getUserTier() {
+    // Hardcoded admin override — always pro
+    if (currentUser && SITE_ADMINS.includes(currentUser.id)) return 'pro';
     if (!userProfile) return 'free';
     return userProfile.effectiveTier || 'free';
 }
 function isAdmin() {
+    // Hardcoded admin override
+    if (currentUser && SITE_ADMINS.includes(currentUser.id)) return true;
     return userProfile?.is_admin === true;
 }
 
