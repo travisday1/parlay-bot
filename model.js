@@ -32,14 +32,15 @@ const SPORT_CONFIG = {
         useAdvancedStats: true,
     },
     'basketball_ncaab': {
-        homeAdvantage: 0.04,
-        fourFactorsWeight: 0.25,
-        netRatingWeight: 0.35,
+        homeAdvantage: 0.04,            // Stronger home court in college
+        fourFactorsWeight: 0.30,        // Same framework applies to college basketball
+        netRatingWeight: 0.30,          // Slightly less reliable with smaller sample sizes
         recentFormWeight: 0.25,
         restWeight: 0.05,
-        scheduleWeight: 0.10,
-        evThreshold: 0.06,          // higher threshold for less efficient market
-        useAdvancedStats: false,    // BallDontLie doesn't have NCAAB advanced stats
+        scheduleWeight: 0.10,           // SoS matters more in college (huge talent gaps)
+        evThreshold: 0.06,              // Higher threshold — less efficient market but noisier data
+        useAdvancedStats: true,         // BallDontLie has NCAAB box scores
+        rankingWeight: 0.10,            // AP/Coaches Poll ranking differential
     },
     'icehockey_nhl': {
         homeAdvantage: 0.015,
@@ -49,7 +50,7 @@ const SPORT_CONFIG = {
         restWeight: 0.10,           // Back-to-backs matter more in hockey
         scheduleWeight: 0.15,
         evThreshold: 0.05,
-        useAdvancedStats: false,
+        useAdvancedStats: true,     // BallDontLie has NHL season stats
     },
     'americanfootball_nfl': {
         homeAdvantage: 0.025,
@@ -223,6 +224,263 @@ async function computeTeamStatsFromGames(teamId, season) {
 }
 
 // ============================================================
+// NCAAB ADVANCED STATS FETCHER
+// Uses BallDontLie NCAAB API for team box score stats
+// Computes Four Factors from aggregated player box scores
+// ============================================================
+async function getNCAABTeamStats(teamName, season) {
+    const cacheKey = `ncaab_${teamName}_${season}`;
+    if (teamStatsCache[cacheKey]) return teamStatsCache[cacheKey];
+
+    try {
+        await sleep(300);
+
+        // Step 1: Find the team ID
+        const teamsUrl = `https://api.balldontlie.io/ncaab/v1/teams?per_page=100`;
+        const teamsResponse = await fetch(teamsUrl, {
+            headers: { 'Authorization': process.env.BALLDONTLIE_API_KEY }
+        });
+
+        if (!teamsResponse.ok) return null;
+        const teamsData = await teamsResponse.json();
+
+        // Match by full_name or partial name match
+        const teamNameLower = teamName.toLowerCase();
+        const team = teamsData.data.find(t =>
+            t.full_name?.toLowerCase() === teamNameLower ||
+            t.name?.toLowerCase() === teamNameLower.split(' ').pop() ||
+            t.full_name?.toLowerCase().includes(teamNameLower) ||
+            teamNameLower.includes(t.full_name?.toLowerCase() || '')
+        );
+
+        if (!team) {
+            console.log(`   ⚠️ Could not find NCAAB team for: ${teamName}`);
+            return null;
+        }
+
+        await sleep(300);
+
+        // Step 2: Get recent game scores to compute stats
+        const gamesUrl = `https://api.balldontlie.io/ncaab/v1/games?seasons[]=${season}&team_ids[]=${team.id}&per_page=25`;
+        const gamesResponse = await fetch(gamesUrl, {
+            headers: { 'Authorization': process.env.BALLDONTLIE_API_KEY }
+        });
+
+        if (!gamesResponse.ok) return null;
+        const gamesData = await gamesResponse.json();
+
+        // Get completed games
+        const completedGames = (gamesData.data || []).filter(g =>
+            g.status === 'post' || g.status === 'Final' || g.home_score > 0
+        );
+
+        if (completedGames.length === 0) return null;
+
+        // Compute stats from game scores
+        let totalPF = 0, totalPA = 0, wins = 0;
+        for (const game of completedGames) {
+            const isHome = game.home_team?.id === team.id;
+            const pf = isHome ? game.home_score : game.away_score;
+            const pa = isHome ? game.away_score : game.home_score;
+            totalPF += pf || 0;
+            totalPA += pa || 0;
+            if (pf > pa) wins++;
+        }
+
+        const gamesPlayed = completedGames.length;
+        const avgPF = totalPF / gamesPlayed;
+        const avgPA = totalPA / gamesPlayed;
+
+        // Step 3: Try to get box score stats for Four Factors computation
+        let fourFactors = null;
+        const recentGameIds = completedGames.slice(0, 5).map(g => g.id);
+
+        if (recentGameIds.length > 0) {
+            const statsPromises = recentGameIds.map(async (gameId) => {
+                await sleep(200);
+                const statsUrl = `https://api.balldontlie.io/ncaab/v1/stats?game_ids[]=${gameId}&team_ids[]=${team.id}&per_page=50`;
+                const resp = await fetch(statsUrl, {
+                    headers: { 'Authorization': process.env.BALLDONTLIE_API_KEY }
+                });
+                if (!resp.ok) return [];
+                const data = await resp.json();
+                return data.data || [];
+            });
+
+            const allPlayerStats = (await Promise.all(statsPromises)).flat();
+
+            if (allPlayerStats.length > 0) {
+                const gameAgg = {};
+                for (const stat of allPlayerStats) {
+                    const gid = stat.game?.id;
+                    if (!gid) continue;
+                    if (!gameAgg[gid]) {
+                        gameAgg[gid] = { fgm: 0, fga: 0, fg3m: 0, fta: 0, ftm: 0, oreb: 0, dreb: 0, turnover: 0, pts: 0 };
+                    }
+                    gameAgg[gid].fgm += stat.fgm || 0;
+                    gameAgg[gid].fga += stat.fga || 0;
+                    gameAgg[gid].fg3m += stat.fg3m || 0;
+                    gameAgg[gid].fta += stat.fta || 0;
+                    gameAgg[gid].ftm += stat.ftm || 0;
+                    gameAgg[gid].oreb += stat.oreb || 0;
+                    gameAgg[gid].dreb += stat.dreb || 0;
+                    gameAgg[gid].turnover += stat.turnover || 0;
+                    gameAgg[gid].pts += stat.pts || 0;
+                }
+
+                const games = Object.values(gameAgg);
+                if (games.length >= 3) {
+                    const avg = (arr, key) => arr.reduce((s, g) => s + g[key], 0) / arr.length;
+                    const avgFGA = avg(games, 'fga');
+                    const avgFGM = avg(games, 'fgm');
+                    const avgFG3M = avg(games, 'fg3m');
+                    const avgFTA = avg(games, 'fta');
+                    const avgFTM = avg(games, 'ftm');
+                    const avgOreb = avg(games, 'oreb');
+                    const avgTOV = avg(games, 'turnover');
+
+                    fourFactors = {
+                        effectiveFGPct: avgFGA > 0 ? Math.round(((avgFGM + 0.5 * avgFG3M) / avgFGA) * 1000) / 1000 : 0,
+                        turnoverPct: avgFGA > 0 ? Math.round((avgTOV / (avgFGA + 0.44 * avgFTA + avgTOV)) * 1000) / 1000 : 0,
+                        freeThrowRate: avgFGA > 0 ? Math.round((avgFTM / avgFGA) * 1000) / 1000 : 0,
+                        offRebRate: 0,
+                    };
+
+                    const possessions = avgFGA + 0.44 * avgFTA + avgTOV - avgOreb;
+                    fourFactors.offensiveRating = possessions > 0 ? Math.round((avg(games, 'pts') / possessions) * 100 * 10) / 10 : 0;
+                    fourFactors.pace = Math.round(possessions * 10) / 10;
+                }
+            }
+        }
+
+        // Step 4: Get AP/Coaches Poll ranking
+        let ranking = null;
+        try {
+            await sleep(200);
+            const rankingsUrl = `https://api.balldontlie.io/ncaab/v1/rankings?season=${season}`;
+            const rankingsResponse = await fetch(rankingsUrl, {
+                headers: { 'Authorization': process.env.BALLDONTLIE_API_KEY }
+            });
+            if (rankingsResponse.ok) {
+                const rankingsData = await rankingsResponse.json();
+                const teamRanking = (rankingsData.data || []).find(r =>
+                    r.team?.id === team.id || r.team?.full_name?.toLowerCase() === teamNameLower
+                );
+                if (teamRanking) {
+                    ranking = teamRanking.rank;
+                }
+            }
+        } catch (e) { /* rankings optional */ }
+
+        const result = {
+            teamId: team.id,
+            teamName: team.full_name || teamName,
+            avgPointsFor: Math.round(avgPF * 10) / 10,
+            avgPointsAgainst: Math.round(avgPA * 10) / 10,
+            pointDifferential: Math.round((avgPF - avgPA) * 10) / 10,
+            winPct: Math.round((wins / gamesPlayed) * 1000) / 1000,
+            gamesAnalyzed: gamesPlayed,
+            apRanking: ranking,
+            offensiveRating: fourFactors?.offensiveRating || 0,
+            defensiveRating: 0,
+            netRating: fourFactors?.offensiveRating ? fourFactors.offensiveRating - 100 : avgPF - avgPA,
+            pace: fourFactors?.pace || 0,
+            effectiveFGPct: fourFactors?.effectiveFGPct || 0,
+            turnoverPct: fourFactors?.turnoverPct || 0,
+            freeThrowRate: fourFactors?.freeThrowRate || 0,
+            offRebPct: fourFactors?.offRebRate || 0,
+            source: fourFactors ? 'balldontlie_ncaab_box_scores' : 'balldontlie_ncaab_scores',
+        };
+
+        teamStatsCache[cacheKey] = result;
+        return result;
+    } catch (e) {
+        console.log(`   ⚠️ NCAAB stats error for ${teamName}: ${e.message}`);
+        return null;
+    }
+}
+
+// ============================================================
+// NHL TEAM STATS FETCHER
+// Uses BallDontLie NHL API for team season stats
+// ============================================================
+async function getNHLTeamStats(teamName, season) {
+    const cacheKey = `nhl_${teamName}_${season}`;
+    if (teamStatsCache[cacheKey]) return teamStatsCache[cacheKey];
+
+    try {
+        await sleep(300);
+
+        // Find team
+        const teamsUrl = `https://api.balldontlie.io/nhl/v1/teams`;
+        const teamsResponse = await fetch(teamsUrl, {
+            headers: { 'Authorization': process.env.BALLDONTLIE_API_KEY }
+        });
+        if (!teamsResponse.ok) return null;
+        const teamsData = await teamsResponse.json();
+
+        const teamNameLower = teamName.toLowerCase();
+        const team = teamsData.data.find(t =>
+            t.full_name?.toLowerCase() === teamNameLower ||
+            t.full_name?.toLowerCase().includes(teamNameLower) ||
+            teamNameLower.includes(t.full_name?.toLowerCase() || '')
+        );
+
+        if (!team) return null;
+
+        await sleep(300);
+
+        // Get recent games to compute stats
+        const gamesUrl = `https://api.balldontlie.io/nhl/v1/games?seasons[]=${season}&team_ids[]=${team.id}&per_page=25`;
+        const gamesResponse = await fetch(gamesUrl, {
+            headers: { 'Authorization': process.env.BALLDONTLIE_API_KEY }
+        });
+
+        if (!gamesResponse.ok) return null;
+        const gamesData = await gamesResponse.json();
+
+        const completedGames = (gamesData.data || []).filter(g =>
+            g.status === 'Final' || g.home_score > 0
+        );
+
+        if (completedGames.length === 0) return null;
+
+        let totalGF = 0, totalGA = 0, wins = 0;
+        for (const game of completedGames) {
+            const isHome = game.home_team?.id === team.id;
+            const gf = isHome ? game.home_score : game.away_score;
+            const ga = isHome ? game.away_score : game.home_score;
+            totalGF += gf || 0;
+            totalGA += ga || 0;
+            if (gf > ga) wins++;
+        }
+
+        const gamesPlayed = completedGames.length;
+
+        const result = {
+            teamId: team.id,
+            teamName: team.full_name,
+            goalsForPerGame: Math.round((totalGF / gamesPlayed) * 100) / 100,
+            goalsAgainstPerGame: Math.round((totalGA / gamesPlayed) * 100) / 100,
+            goalDifferentialPerGame: Math.round(((totalGF - totalGA) / gamesPlayed) * 100) / 100,
+            avgPointsFor: Math.round((totalGF / gamesPlayed) * 100) / 100,
+            avgPointsAgainst: Math.round((totalGA / gamesPlayed) * 100) / 100,
+            pointDifferential: Math.round(((totalGF - totalGA) / gamesPlayed) * 100) / 100,
+            netRating: Math.round(((totalGF - totalGA) / gamesPlayed) * 100) / 100,
+            winPct: gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 1000) / 1000 : 0,
+            gamesAnalyzed: gamesPlayed,
+            source: 'balldontlie_nhl',
+        };
+
+        teamStatsCache[cacheKey] = result;
+        return result;
+    } catch (e) {
+        console.log(`   ⚠️ NHL stats error for ${teamName}: ${e.message}`);
+        return null;
+    }
+}
+
+// ============================================================
 // GENERIC TEAM STATS (NON-NBA)
 // Uses Supabase game history to compute basic power ratings
 // ============================================================
@@ -364,7 +622,7 @@ function calculateEV(modelProb, americanOdds) {
 // ============================================================
 // PROJECTED TOTAL (for O/U bets)
 // ============================================================
-function projectTotal(homeStats, awayStats, sportKey) {
+function projectTotal(homeStats, awayStats, sportKey, enrichment) {
     if (!homeStats || !awayStats) return null;
 
     if (sportKey === 'basketball_nba') {
@@ -372,14 +630,25 @@ function projectTotal(homeStats, awayStats, sportKey) {
         const awayORtg = awayStats.offensiveRating || 110;
         const matchupPace = ((homeStats.pace || 98) + (awayStats.pace || 98)) / 2;
 
-        const homeProjected = (homeORtg / 100) * matchupPace;
-        const awayProjected = (awayORtg / 100) * matchupPace;
+        let homeProjected = (homeORtg / 100) * matchupPace;
+        let awayProjected = (awayORtg / 100) * matchupPace;
+
+        // Referee pace adjustment
+        const refTendency = enrichment?.refereeData?.tendency;
+        if (refTendency) {
+            // High-foul crews add ~2-4 more free throw attempts per team
+            // Each additional FTA ≈ 0.75 points on average (75% FT%)
+            const foulImpact = refTendency.foulRateDeviation * 0.75;
+            homeProjected += foulImpact / 2;
+            awayProjected += foulImpact / 2;
+        }
 
         return {
             projectedTotal: Math.round((homeProjected + awayProjected) * 10) / 10,
             homeProjected: Math.round(homeProjected * 10) / 10,
             awayProjected: Math.round(awayProjected * 10) / 10,
             matchupPace: Math.round(matchupPace * 10) / 10,
+            refereeAdjustment: refTendency ? Math.round(refTendency.foulRateDeviation * 0.75 * 10) / 10 : 0,
         };
     }
 
@@ -416,14 +685,24 @@ async function generateGameProbabilities(game) {
     let homeStats = null;
     let awayStats = null;
 
-    if (config.useAdvancedStats && sportKey === 'basketball_nba') {
+    if (sportKey === 'basketball_nba') {
         const season = new Date(game.commence_time).getFullYear();
         const nbaSeasonYear = new Date(game.commence_time).getMonth() < 8 ? season - 1 : season;
         homeStats = await getNBATeamAdvancedStats(homeTeam, nbaSeasonYear);
         awayStats = await getNBATeamAdvancedStats(awayTeam, nbaSeasonYear);
+    } else if (sportKey === 'basketball_ncaab') {
+        const season = new Date(game.commence_time).getFullYear();
+        const ncaabSeasonYear = new Date(game.commence_time).getMonth() < 8 ? season - 1 : season;
+        homeStats = await getNCAABTeamStats(homeTeam, ncaabSeasonYear);
+        awayStats = await getNCAABTeamStats(awayTeam, ncaabSeasonYear);
+    } else if (sportKey === 'icehockey_nhl') {
+        const season = new Date(game.commence_time).getFullYear();
+        const nhlSeasonYear = new Date(game.commence_time).getMonth() < 8 ? season - 1 : season;
+        homeStats = await getNHLTeamStats(homeTeam, nhlSeasonYear);
+        awayStats = await getNHLTeamStats(awayTeam, nhlSeasonYear);
     }
 
-    // Fallback to generic stats from Supabase history
+    // Fallback to generic stats from Supabase history for any sport
     if (!homeStats) homeStats = await getGenericTeamStats(homeTeam, sportKey);
     if (!awayStats) awayStats = await getGenericTeamStats(awayTeam, sportKey);
 
@@ -436,10 +715,21 @@ async function generateGameProbabilities(game) {
         powerDiff += (homeStats.pointDifferential - awayStats.pointDifferential) * config.netRatingWeight;
     }
 
-    // Four Factors component (NBA only)
+    // Four Factors component (basketball sports)
     if (config.fourFactorsWeight > 0 && homeStats && awayStats) {
         const ffDiff = computeFourFactorsDiff(homeStats, awayStats);
         powerDiff += ffDiff * config.fourFactorsWeight;
+    }
+
+    // NCAAB ranking adjustment
+    if (sportKey === 'basketball_ncaab' && config.rankingWeight) {
+        const homeRank = homeStats?.apRanking || 100; // unranked = 100
+        const awayRank = awayStats?.apRanking || 100;
+        // Ranked teams have an edge; bigger rank gap = bigger advantage
+        // Normalize: rank 1 = +2.0 points, rank 25 = +0.5, unranked = 0
+        const homeRankBonus = homeRank <= 25 ? (26 - homeRank) * 0.08 : 0;
+        const awayRankBonus = awayRank <= 25 ? (26 - awayRank) * 0.08 : 0;
+        powerDiff += (homeRankBonus - awayRankBonus) * config.rankingWeight * 10;
     }
 
     // Step 3: Rest differential
@@ -455,7 +745,7 @@ async function generateGameProbabilities(game) {
     const awayMLEV = calculateEV(awayWinProb, parseFloat(odds.away_odds));
 
     // Step 6: Project total for O/U
-    const totalProjection = projectTotal(homeStats, awayStats, sportKey);
+    const totalProjection = projectTotal(homeStats, awayStats, sportKey, game.enrichment);
     let overEV = null;
     let underEV = null;
 
@@ -550,5 +840,8 @@ module.exports = {
     modelAllGames,
     calculateEV,
     impliedProbFromOdds,
+    getNBATeamAdvancedStats,
+    getNCAABTeamStats,
+    getNHLTeamStats,
     SPORT_CONFIG,
 };
