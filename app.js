@@ -427,7 +427,14 @@ function updateUserMenu() {
 function toggleUserDropdown(e) {
     e.stopPropagation();
     const dd = document.getElementById('user-dropdown');
-    if (dd) dd.classList.toggle('open');
+    if (!dd) return;
+    dd.classList.toggle('open');
+    if (dd.classList.contains('open')) {
+        const trigger = e.currentTarget;
+        const rect = trigger.getBoundingClientRect();
+        dd.style.top = (rect.bottom + 8) + 'px';
+        dd.style.right = (window.innerWidth - rect.right) + 'px';
+    }
 }
 function closeUserDropdown() {
     const dd = document.getElementById('user-dropdown');
