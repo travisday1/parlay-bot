@@ -178,10 +178,37 @@ CREATE INDEX IF NOT EXISTS idx_profiles_stripe_customer ON public.profiles(strip
 CREATE INDEX IF NOT EXISTS idx_profiles_subscription ON public.profiles(subscription_tier);
 
 -- ============================================================
--- AUTO-CREATE PROFILE ON SIGNUP
+-- PENDING INVITES — admin-assigned tiers applied on signup
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.pending_invites (
+    email TEXT PRIMARY KEY,
+    granted_tier TEXT NOT NULL DEFAULT 'free',
+    granted_by UUID,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.pending_invites ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can read pending_invites" ON public.pending_invites
+    FOR SELECT USING (
+        EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE)
+    );
+CREATE POLICY "Admins can insert pending_invites" ON public.pending_invites
+    FOR INSERT WITH CHECK (
+        EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE)
+    );
+CREATE POLICY "Admins can delete pending_invites" ON public.pending_invites
+    FOR DELETE USING (
+        EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE)
+    );
+
+-- ============================================================
+-- AUTO-CREATE PROFILE ON SIGNUP (with pending invite support)
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    _invite RECORD;
 BEGIN
     INSERT INTO public.profiles (id, email, display_name, avatar_url, subscription_tier)
     VALUES (
@@ -195,6 +222,19 @@ BEGIN
         email = EXCLUDED.email,
         display_name = COALESCE(EXCLUDED.display_name, profiles.display_name),
         avatar_url = COALESCE(EXCLUDED.avatar_url, profiles.avatar_url);
+
+    -- Check for a pending invite and apply the granted tier
+    SELECT * INTO _invite FROM public.pending_invites WHERE email = NEW.email LIMIT 1;
+    IF FOUND THEN
+        UPDATE public.profiles
+        SET granted_tier = _invite.granted_tier,
+            granted_by = _invite.granted_by,
+            granted_at = NOW()
+        WHERE id = NEW.id;
+
+        DELETE FROM public.pending_invites WHERE email = NEW.email;
+    END IF;
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -203,3 +243,4 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+

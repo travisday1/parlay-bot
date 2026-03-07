@@ -312,13 +312,20 @@
             // Hardcoded admin check — bypass RLS
             const isSiteAdmin = SITE_ADMINS.includes(session.user.id);
 
-            const { data: profile } = await sb
+            let { data: profile } = await sb
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
                 .single();
 
             if (!isSiteAdmin && (!profile || !profile.is_admin)) { showDenied(); return; }
+
+            // Auto-set is_admin = TRUE for SITE_ADMINS so RLS policies work
+            if (isSiteAdmin && profile && !profile.is_admin) {
+                await sb.from('profiles').update({ is_admin: true }).eq('id', session.user.id);
+                profile.is_admin = true;
+            }
+
             adminProfile = profile || { id: session.user.id, email: session.user.email, is_admin: true };
 
             document.getElementById('admin-loading').style.display = 'none';
@@ -463,11 +470,23 @@
         async function inviteUser() {
             const email = document.getElementById('invite-email').value.trim();
             const tier = document.getElementById('invite-tier').value;
-            const msg = document.getElementById('invite-msg');
 
             if (!email) { showInviteMsg('Please enter an email address.', '#f87171'); return; }
 
-            // Use Supabase magic link invite
+            // Store pending invite with tier (applied automatically on signup via DB trigger)
+            if (tier !== 'free') {
+                const { error: invErr } = await sb
+                    .from('pending_invites')
+                    .upsert({
+                        email: email.toLowerCase(),
+                        granted_tier: tier,
+                        granted_by: adminProfile.id,
+                        created_at: new Date().toISOString()
+                    }, { onConflict: 'email' });
+                if (invErr) console.warn('Could not save pending invite:', invErr.message);
+            }
+
+            // Send magic link invite
             const { data, error } = await sb.auth.signInWithOtp({
                 email,
                 options: {
@@ -481,20 +500,13 @@
                 return;
             }
 
-            // If a tier is specified, try to set it (this may fail if the profile doesn't exist yet)
+            // Also try to update existing profile if user already signed up
             if (tier !== 'free') {
-                // Wait a moment for the profile trigger to fire
-                setTimeout(async () => {
-                    const { error: updateErr } = await sb
-                        .from('profiles')
-                        .update({
-                            granted_tier: tier,
-                            granted_by: adminProfile.id,
-                            granted_at: new Date().toISOString()
-                        })
-                        .eq('email', email);
-                    if (updateErr) console.warn('Could not set tier yet, user may need to sign in first:', updateErr.message);
-                }, 1000);
+                await sb.from('profiles').update({
+                    granted_tier: tier,
+                    granted_by: adminProfile.id,
+                    granted_at: new Date().toISOString()
+                }).eq('email', email.toLowerCase());
             }
 
             showInviteMsg(`Invite sent to ${email}! They'll receive a magic link to sign in.`, '#34d399');
