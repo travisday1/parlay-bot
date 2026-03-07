@@ -123,25 +123,33 @@ async function loadUserProfile() {
         .single();
 
     if (error) {
-        console.warn('Profile not found, creating...', error.message);
-        const { data: newProfile } = await sb
+        console.warn('Profile load error:', error.message);
+        // Only create a new profile if one truly doesn't exist — don't overwrite existing data
+        const { data: newProfile, error: upsertErr } = await sb
             .from('profiles')
-            .upsert({
+            .insert({
                 id: currentUser.id,
                 email: currentUser.email,
-                display_name: currentUser.user_metadata?.full_name || currentUser.email.split('@')[0],
+                display_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
                 avatar_url: currentUser.user_metadata?.avatar_url || null,
                 subscription_tier: 'free'
             })
             .select()
             .single();
-        userProfile = newProfile;
+        if (upsertErr) {
+            console.warn('Profile insert failed (may already exist):', upsertErr.message);
+            // Profile exists but we can't read it — default to free
+            userProfile = { subscription_tier: 'free', is_admin: false };
+        } else {
+            userProfile = newProfile;
+        }
     } else {
         userProfile = profile;
     }
     // Resolve effective tier: granted_tier overrides subscription_tier
     if (userProfile) {
         userProfile.effectiveTier = userProfile.granted_tier || userProfile.subscription_tier || 'free';
+        console.log('Profile loaded:', { tier: userProfile.effectiveTier, admin: userProfile.is_admin, email: userProfile.email });
     }
 }
 
