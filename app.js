@@ -205,9 +205,14 @@ async function signInWithProvider(provider) {
     });
     if (error) {
         const errorEl = document.getElementById('auth-error');
-        errorEl.textContent = error.message;
+        // Friendly message when provider isn't configured in Supabase yet
+        if (error.message.includes('provider') || error.message.includes('Unsupported')) {
+            errorEl.textContent = `${provider.charAt(0).toUpperCase() + provider.slice(1)} login coming soon! Use email/password for now.`;
+        } else {
+            errorEl.textContent = error.message;
+        }
         errorEl.style.display = 'block';
-        errorEl.style.color = '#ff5252';
+        errorEl.style.color = '#fbbf24'; // warn-yellow instead of red
     }
 }
 
