@@ -33,6 +33,22 @@ CREATE TABLE IF NOT EXISTS public.odds (
     UNIQUE(game_id, bookmaker, market)
 );
 
+-- 2b) ODDS_HISTORY — append-only snapshots for line movement tracking
+CREATE TABLE IF NOT EXISTS public.odds_history (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    game_id TEXT REFERENCES public.games(game_id) ON DELETE CASCADE,
+    bookmaker TEXT,
+    home_odds NUMERIC,
+    away_odds NUMERIC,
+    home_point NUMERIC,
+    away_point NUMERIC,
+    over_odds NUMERIC,
+    over_point NUMERIC,
+    under_odds NUMERIC,
+    under_point NUMERIC,
+    captured_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 3) DAILY_PICKS — AI-generated picks stored each day
 CREATE TABLE IF NOT EXISTS public.daily_picks (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -85,7 +101,15 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     email TEXT,
     display_name TEXT,
     avatar_url TEXT,
-    subscription_tier TEXT DEFAULT 'free',  -- 'free', 'premium', 'admin'
+    subscription_tier TEXT DEFAULT 'free',  -- 'free', 'plus', 'pro'
+    stripe_customer_id TEXT UNIQUE,
+    stripe_subscription_id TEXT,
+    subscription_status TEXT DEFAULT 'inactive',
+    subscription_period_end TIMESTAMPTZ,
+    is_admin BOOLEAN DEFAULT FALSE,
+    granted_tier TEXT DEFAULT NULL,       -- admin-granted tier override
+    granted_by UUID REFERENCES public.profiles(id),
+    granted_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -111,6 +135,7 @@ ALTER TABLE public.odds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_picks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pick_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recommended_parlays ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.odds_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.leaderboard_entries ENABLE ROW LEVEL SECURITY;
 
@@ -120,11 +145,18 @@ CREATE POLICY "Allow public read on odds" ON public.odds FOR SELECT USING (true)
 CREATE POLICY "Allow public read on daily_picks" ON public.daily_picks FOR SELECT USING (true);
 CREATE POLICY "Allow public read on pick_results" ON public.pick_results FOR SELECT USING (true);
 CREATE POLICY "Allow public read on recommended_parlays" ON public.recommended_parlays FOR SELECT USING (true);
+CREATE POLICY "Allow public read on odds_history" ON public.odds_history FOR SELECT USING (true);
 CREATE POLICY "Allow public read on leaderboard_entries" ON public.leaderboard_entries FOR SELECT USING (true);
 
--- Users can read/update their own profile
+-- Profile policies
 CREATE POLICY "Users can read own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Admins can read all profiles" ON public.profiles
+    FOR SELECT USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE));
+CREATE POLICY "Admins can update all profiles" ON public.profiles
+    FOR UPDATE USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = TRUE));
+CREATE POLICY "Allow insert for new users" ON public.profiles
+    FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Users can insert their own leaderboard entries
 CREATE POLICY "Users can insert own leaderboard entries" ON public.leaderboard_entries 
@@ -139,5 +171,35 @@ CREATE INDEX IF NOT EXISTS idx_picks_date ON public.daily_picks(pick_date);
 CREATE INDEX IF NOT EXISTS idx_picks_tier ON public.daily_picks(tier);
 CREATE INDEX IF NOT EXISTS idx_results_pick ON public.pick_results(pick_id);
 CREATE INDEX IF NOT EXISTS idx_parlays_date ON public.recommended_parlays(parlay_date);
+CREATE INDEX IF NOT EXISTS idx_odds_history_game ON public.odds_history(game_id, captured_at);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_user ON public.leaderboard_entries(user_id);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_date ON public.leaderboard_entries(bet_date);
+CREATE INDEX IF NOT EXISTS idx_profiles_stripe_customer ON public.profiles(stripe_customer_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_subscription ON public.profiles(subscription_tier);
+
+-- ============================================================
+-- AUTO-CREATE PROFILE ON SIGNUP
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, email, display_name, avatar_url, subscription_tier)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+        NEW.raw_user_meta_data->>'avatar_url',
+        'free'
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        display_name = COALESCE(EXCLUDED.display_name, profiles.display_name),
+        avatar_url = COALESCE(EXCLUDED.avatar_url, profiles.avatar_url);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();

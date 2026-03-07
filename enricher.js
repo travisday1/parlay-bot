@@ -117,12 +117,13 @@ async function getScheduleFatigue(teamName, sportKey, gameDate) {
 // Fetches injury reports from free APIs
 // ============================================================
 async function getInjuryReport(teamName, sportKey) {
-    // Use balldontlie.io for NBA injuries
-    // For other sports, we rely on Gemini's training knowledge
     if (sportKey === 'basketball_nba') {
         return await getNBAInjuries(teamName);
     }
-    // For NCAA, NHL, MLB — Gemini handles with its own knowledge
+    if (sportKey === 'icehockey_nhl') {
+        return await getNHLInjuries(teamName);
+    }
+    // For NCAA, MLB — Gemini handles with its training knowledge
     return { team: teamName, injuries: [], source: 'ai_knowledge' };
 }
 
@@ -163,11 +164,34 @@ async function getNBAInjuries(teamName) {
     }
 }
 
+// Known star players who significantly move betting lines when injured
+const STAR_PLAYERS = new Set([
+    // NBA
+    'LeBron James', 'Stephen Curry', 'Kevin Durant', 'Giannis Antetokounmpo',
+    'Nikola Jokic', 'Luka Doncic', 'Joel Embiid', 'Jayson Tatum',
+    'Shai Gilgeous-Alexander', 'Anthony Davis', 'Damian Lillard', 'Jimmy Butler',
+    'Donovan Mitchell', 'De\'Aaron Fox', 'Tyrese Haliburton', 'Paolo Banchero',
+    'Trae Young', 'Devin Booker', 'Kyrie Irving', 'Karl-Anthony Towns',
+    'Ja Morant', 'Anthony Edwards', 'Jalen Brunson', 'Bam Adebayo',
+    'Scottie Barnes', 'Chet Holmgren', 'Victor Wembanyama', 'Lauri Markkanen',
+    // NHL
+    'Connor McDavid', 'Nathan MacKinnon', 'Auston Matthews', 'Nikita Kucherov',
+    'Leon Draisaitl', 'Cale Makar', 'David Pastrnak', 'Kirill Kaprizov',
+    'Artemi Panarin', 'Mikko Rantanen', 'Igor Shesterkin', 'Connor Hellebuyck',
+    'Andrei Vasilevskiy', 'Sidney Crosby', 'Alex Ovechkin', 'Matthew Tkachuk',
+    'Jack Hughes', 'Jason Robertson', 'Aleksander Barkov', 'Mika Zibanejad',
+]);
+
 function classifyPlayerImpact(athlete) {
-    // Simple heuristic — could be enhanced with stats
     if (!athlete) return 'Bench';
-    // ESPN doesn't always provide position ranking, so we classify simply
-    return 'Rotation'; // Default to rotation, Gemini can further assess
+    const name = athlete.displayName || athlete.fullName || '';
+    if (STAR_PLAYERS.has(name)) return 'Star';
+    // Use ESPN position data as a starter heuristic when available
+    const pos = athlete.position?.abbreviation;
+    if (pos && ['PG', 'SG', 'SF', 'PF', 'C', 'G', 'F', 'LW', 'RW', 'D'].includes(pos)) {
+        return 'Starter';
+    }
+    return 'Rotation';
 }
 
 const NBA_TEAM_SLUGS = {
@@ -186,6 +210,50 @@ const NBA_TEAM_SLUGS = {
 
 function teamNameToESPNSlug(teamName) {
     return NBA_TEAM_SLUGS[teamName] || null;
+}
+
+const NHL_TEAM_SLUGS = {
+    'Toronto Maple Leafs': 'tor', 'New York Rangers': 'nyr', 'Boston Bruins': 'bos',
+    'Tampa Bay Lightning': 'tb', 'Florida Panthers': 'fla', 'Buffalo Sabres': 'buf',
+    'Pittsburgh Penguins': 'pit', 'Philadelphia Flyers': 'phi', 'Columbus Blue Jackets': 'cbj',
+    'Nashville Predators': 'nsh', 'Winnipeg Jets': 'wpg', 'Calgary Flames': 'cgy',
+    'Edmonton Oilers': 'edm', 'Vancouver Canucks': 'van', 'Colorado Avalanche': 'col',
+    'Dallas Stars': 'dal', 'Minnesota Wild': 'min', 'St Louis Blues': 'stl',
+    'Chicago Blackhawks': 'chi', 'Detroit Red Wings': 'det', 'Los Angeles Kings': 'la',
+    'Anaheim Ducks': 'ana', 'San Jose Sharks': 'sj', 'Seattle Kraken': 'sea',
+    'Carolina Hurricanes': 'car', 'New Jersey Devils': 'nj', 'New York Islanders': 'nyi',
+    'Washington Capitals': 'wsh', 'Montreal Canadiens': 'mtl', 'Ottawa Senators': 'ott',
+    'Vegas Golden Knights': 'vgk', 'Utah Hockey Club': 'uta',
+};
+
+async function getNHLInjuries(teamName) {
+    try {
+        const slug = NHL_TEAM_SLUGS[teamName];
+        if (!slug) return { team: teamName, injuries: [], source: 'not_found' };
+
+        const url = `https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/teams/${slug}`;
+        const response = await fetch(url);
+        if (!response.ok) return { team: teamName, injuries: [], source: 'api_error' };
+
+        const data = await response.json();
+        const injuries = [];
+
+        if (data.team?.injuries) {
+            for (const inj of data.team.injuries) {
+                injuries.push({
+                    player: inj.athlete?.displayName || 'Unknown',
+                    status: inj.status || 'Unknown',
+                    detail: inj.type?.description || inj.details?.detail || '',
+                    impact: classifyPlayerImpact(inj.athlete)
+                });
+            }
+        }
+
+        return { team: teamName, injuries, source: 'espn' };
+    } catch (e) {
+        console.log(`   ⚠️ NHL injury lookup failed for ${teamName}: ${e.message}`);
+        return { team: teamName, injuries: [], source: 'error' };
+    }
 }
 
 // ============================================================
@@ -312,29 +380,40 @@ function calculateOUStats(games, teamName) {
 
 // ============================================================
 // PHASE 4: LINE MOVEMENT DETECTION
-// Stores opening odds and detects significant movement
+// Compares opening vs current odds from odds_history table
 // ============================================================
 async function getLineMovement(game) {
     const odds = game.odds?.[0];
     if (!odds) return null;
 
-    // Check if we have a previously stored opening line
-    const { data: history } = await supabase
-        .from('odds')
-        .select('home_odds, away_odds, home_point, away_point, over_point, under_point, updated_at')
+    // Get the EARLIEST recorded odds snapshot (opening line)
+    const { data: opening } = await supabase
+        .from('odds_history')
+        .select('*')
         .eq('game_id', game.game_id)
-        .order('updated_at', { ascending: true })
+        .order('captured_at', { ascending: true })
         .limit(1);
 
-    if (!history || history.length === 0) return null;
+    // Get the LATEST recorded odds snapshot (current line)
+    const { data: latest } = await supabase
+        .from('odds_history')
+        .select('*')
+        .eq('game_id', game.game_id)
+        .order('captured_at', { ascending: false })
+        .limit(1);
 
-    const opening = history[0];
-    const current = odds;
+    if (!opening?.length || !latest?.length) return null;
 
-    const spreadMove = (parseFloat(current.home_point) || 0) - (parseFloat(opening.home_point) || 0);
-    const totalMove = (parseFloat(current.over_point) || 0) - (parseFloat(opening.over_point) || 0);
-    const homeMLMove = (parseFloat(current.home_odds) || 0) - (parseFloat(opening.home_odds) || 0);
-    const awayMLMove = (parseFloat(current.away_odds) || 0) - (parseFloat(opening.away_odds) || 0);
+    // If we only have one snapshot, no movement detectable yet
+    if (opening[0].id === latest[0].id) return null;
+
+    const open = opening[0];
+    const current = latest[0];
+
+    const spreadMove = (parseFloat(current.home_point) || 0) - (parseFloat(open.home_point) || 0);
+    const totalMove = (parseFloat(current.over_point) || 0) - (parseFloat(open.over_point) || 0);
+    const homeMLMove = (parseFloat(current.home_odds) || 0) - (parseFloat(open.home_odds) || 0);
+    const awayMLMove = (parseFloat(current.away_odds) || 0) - (parseFloat(open.away_odds) || 0);
 
     const signals = [];
     if (Math.abs(spreadMove) >= 1.5) {
@@ -354,9 +433,9 @@ async function getLineMovement(game) {
         awayMLMovement: awayMLMove,
         significantMovement: signals.length > 0,
         signals,
-        openingSpread: parseFloat(opening.home_point) || 0,
+        openingSpread: parseFloat(open.home_point) || 0,
         currentSpread: parseFloat(current.home_point) || 0,
-        openingTotal: parseFloat(opening.over_point) || 0,
+        openingTotal: parseFloat(open.over_point) || 0,
         currentTotal: parseFloat(current.over_point) || 0,
     };
 }

@@ -170,6 +170,32 @@ async function updateAllSports() {
         }
     }
 
+    // Append to odds_history for line movement tracking (never overwrites)
+    if (allOdds.length > 0) {
+        const historyRecords = allOdds.map(o => ({
+            game_id: o.game_id,
+            bookmaker: o.bookmaker,
+            home_odds: o.home_odds,
+            away_odds: o.away_odds,
+            home_point: o.home_point,
+            away_point: o.away_point,
+            over_odds: o.over_odds,
+            over_point: o.over_point,
+            under_odds: o.under_odds,
+            under_point: o.under_point,
+        }));
+
+        const { error: histError } = await supabase
+            .from('odds_history')
+            .insert(historyRecords);
+
+        if (histError) {
+            console.error('⚠️ Error saving odds history:', histError.message);
+        } else {
+            console.log(`   📜 ${historyRecords.length} odds history snapshots saved`);
+        }
+    }
+
     console.log('\n🎯 Update complete!');
 }
 

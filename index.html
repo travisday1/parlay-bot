@@ -22,19 +22,75 @@
     <div class="bg-glow bg-glow-2"></div>
     <div class="bg-glow bg-glow-3"></div>
 
-    <!-- PASSWORD GATE -->
-    <div id="password-gate" class="password-gate">
-        <div class="pw-card">
+    <!-- AUTH GATE -->
+    <div id="auth-gate" class="password-gate">
+        <div class="pw-card" style="max-width: 420px;">
             <div class="pw-icon">🎯</div>
             <h1 class="pw-title">PARLAY BOT</h1>
             <p class="pw-subtitle">AI-Powered Betting Research</p>
-            <p class="pw-desc">Enter the password to continue</p>
-            <div class="pw-input-group">
-                <input type="password" id="pw-input" class="pw-input" placeholder="Password"
-                    onkeydown="if(event.key==='Enter')attemptLogin()">
-                <button class="pw-btn" onclick="attemptLogin()">Enter →</button>
+
+            <!-- Social Login Buttons -->
+            <div id="social-logins" style="display: flex; flex-direction: column; gap: 8px; margin: 16px 0;">
+                <button class="social-btn google-btn" onclick="signInWithProvider('google')">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"
+                        style="width: 20px; height: 20px;">
+                    Continue with Google
+                </button>
+                <button class="social-btn apple-btn" onclick="signInWithProvider('apple')">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path
+                            d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                    </svg>
+                    Continue with Apple
+                </button>
+                <button class="social-btn facebook-btn" onclick="signInWithProvider('facebook')">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="#1877F2">
+                        <path
+                            d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                    </svg>
+                    Continue with Facebook
+                </button>
             </div>
-            <p id="pw-error" class="pw-error" style="display:none;">Wrong password. Try again.</p>
+
+            <div style="display: flex; align-items: center; gap: 12px; margin: 16px 0;">
+                <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                <span style="color: rgba(255,255,255,0.4); font-size: 0.8rem;">or</span>
+                <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+            </div>
+
+            <!-- Email Auth Form -->
+            <div id="auth-form">
+                <div class="pw-input-group" style="flex-direction: column; gap: 8px;">
+                    <input type="email" id="auth-email" class="pw-input" placeholder="Email address"
+                        autocomplete="email">
+                    <input type="password" id="auth-password" class="pw-input" placeholder="Password"
+                        autocomplete="current-password" onkeydown="if(event.key==='Enter')handleEmailAuth()">
+                    <div id="auth-name-field" style="display: none;">
+                        <input type="text" id="auth-name" class="pw-input" placeholder="Display name (optional)"
+                            style="width:100%;">
+                    </div>
+                    <button class="pw-btn" onclick="handleEmailAuth()" id="auth-submit-btn" style="width:100%;">Sign
+                        In</button>
+                </div>
+            </div>
+
+            <p id="auth-error" class="pw-error" style="display:none;"></p>
+
+            <div style="margin-top: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.5);">
+                <a href="#" onclick="toggleAuthMode(); return false;" id="auth-toggle-link"
+                    style="color: #4fc3f7;">Don't have an account? Sign up</a>
+                <span style="margin: 0 8px;">·</span>
+                <a href="#" onclick="sendPasswordReset(); return false;" style="color: #4fc3f7;">Forgot password?</a>
+            </div>
+
+            <p style="margin-top: 16px; font-size: 0.7rem; color: rgba(255,255,255,0.3); line-height: 1.4;">
+                By signing up you agree to our <a href="/terms" style="color: rgba(255,255,255,0.5);">Terms of
+                    Service</a> and <a href="/privacy" style="color: rgba(255,255,255,0.5);">Privacy Policy</a>.
+                Must be 21+ to use this service. Parlay Bot provides sports analysis for entertainment and informational
+                purposes only.
+                <a href="https://www.ncpgambling.org" target="_blank" style="color: rgba(255,255,255,0.5);">Gambling
+                    Problem? Call 1-800-GAMBLER.</a>
+            </p>
         </div>
     </div>
 
@@ -51,6 +107,7 @@
                     </div>
                 </div>
                 <div class="header-meta">
+                    <div id="user-menu" class="user-menu"></div>
                     <div class="date-badge">
                         <span class="date-icon">📅</span>
                         <span id="header-date">Loading...</span>

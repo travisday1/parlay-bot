@@ -7,6 +7,7 @@ require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { enrichGames, formatEnrichmentForPrompt } = require('./enricher');
+const { generateCalibrationContext } = require('./calibrator');
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -45,7 +46,7 @@ async function fetchTodaysGames() {
     return games;
 }
 
-function buildAnalysisPrompt(games, sportTitle) {
+function buildAnalysisPrompt(games, sportTitle, calibrationText) {
     const gameLines = games.map((g, i) => {
         const odds = g.odds?.[0];
         if (!odds) return null;
@@ -88,6 +89,8 @@ For each game, produce:
 
 IMPORTANT: Be selective. Only assign "lock" to games where you have VERY HIGH confidence. Most games should be "value" or "skip".
 
+${calibrationText || ''}
+
 Here are today's ${sportTitle} games with enrichment data:
 ${gameLines}
 
@@ -110,38 +113,8 @@ Respond in VALID JSON format only. No markdown, no explanation outside the JSON.
       "ou_pick": "over|under|skip",
       "ou_rationale": "Why Over or Under based on scoring trends, pace, fatigue, injuries to scorers"
     }
-  ],
-  "recommended_parlays": [
-    {
-      "tier": "safe",
-      "name": "The Safe Bag",
-      "legs": [
-        {"picked_team": "Team B ML", "odds": -200, "game": "Team A @ Team B"}
-      ],
-      "rationale": "Why this parlay makes sense together"
-    },
-    {
-      "tier": "value",
-      "name": "The Value Play",
-      "legs": [...],
-      "rationale": "..."
-    },
-    {
-      "tier": "longshot",
-      "name": "The Big Swing",
-      "legs": [...],
-      "rationale": "..."
-    }
   ]
-}
-
-CRITICAL PARLAY RULES:
-1. "The Safe Bag" MUST include your 3 highest-confidence LOCK picks (75%+ confidence). These should be heavy favorites with the best chance of winning. The combined payout will be low — that's expected.
-2. "The Value Play" MUST use DIFFERENT picks than The Safe Bag. Focus on "value" tier picks (60-74% confidence) where the odds offer a better risk/reward ratio.
-3. "The Big Swing" MUST include at least one longshot pick (under 60% confidence) where the odds payout is significantly higher.
-4. NO two parlays should share the same legs. Each parlay must be a DISTINCT combination.
-5. Each parlay should have 3 legs.
-6. Consider mixing SIDE picks and O/U picks within parlays for variety and correlation.`;
+}`;
 }
 
 function americanToDecimal(american) {
@@ -157,10 +130,10 @@ function calculateParlayOdds(legs) {
     return Math.round((combined - 1) * 100) / 100; // decimal multiplier
 }
 
-async function analyzeGames(games, sportTitle) {
+async function analyzeGames(games, sportTitle, calibrationText) {
     if (games.length === 0) return { picks: [], recommended_parlays: [] };
 
-    const prompt = buildAnalysisPrompt(games, sportTitle);
+    const prompt = buildAnalysisPrompt(games, sportTitle, calibrationText);
 
     const model = genAI.getGenerativeModel({
         model: 'gemini-2.5-flash',
@@ -198,6 +171,23 @@ async function storePicks(analysis, games, sportTitle) {
         const game = games[gameIndex];
         if (!game) continue;
 
+        // Ensure picked_line is set for spread and O/U picks (settler needs this)
+        let pickedLine = pick.picked_line || null;
+        const gameOdds = game.odds?.[0];
+        if (gameOdds && !pickedLine) {
+            if (pick.pick_type === 'spread') {
+                // Use the spread points for the picked team
+                if (pick.picked_team === game.home_team) {
+                    pickedLine = gameOdds.home_point;
+                } else if (pick.picked_team === game.away_team) {
+                    pickedLine = gameOdds.away_point;
+                }
+            } else if (pick.pick_type === 'over' || pick.pick_type === 'under') {
+                // Use the total line
+                pickedLine = gameOdds.over_point;
+            }
+        }
+
         const { error } = await supabase
             .from('daily_picks')
             .upsert({
@@ -207,7 +197,7 @@ async function storePicks(analysis, games, sportTitle) {
                 pick_type: pick.pick_type,
                 picked_team: pick.picked_team,
                 picked_odds: pick.picked_odds,
-                picked_line: pick.picked_line || null,
+                picked_line: pickedLine,
                 confidence: pick.confidence,
                 rationale: pick.rationale
             }, { onConflict: 'game_id,pick_date,pick_type' });
@@ -263,6 +253,14 @@ async function runFullAnalysis() {
     const allGames = await fetchTodaysGames();
     console.log(`\n📦 Found ${allGames.length} games in the database for today.\n`);
 
+    // Load calibration data from recent settled results
+    const calibration = await generateCalibrationContext(14);
+    if (calibration.hasData) {
+        console.log(`📊 Calibration loaded — feeding accuracy data into AI prompt`);
+    } else {
+        console.log(`📊 No calibration data yet — run settler.js after games complete to build feedback loop`);
+    }
+
     if (allGames.length === 0) {
         console.log('⚠️ No games found. Run updater.js first to fetch odds.');
         return;
@@ -297,7 +295,7 @@ async function runFullAnalysis() {
                 const enrichedBatch = await enrichGames(batch);
 
                 process.stdout.write(`   🤖 Sending to Gemini${batchLabel}...`);
-                const analysis = await analyzeGames(enrichedBatch, sportTitle);
+                const analysis = await analyzeGames(enrichedBatch, sportTitle, calibration.text);
 
                 const lockCount = (analysis.picks || []).filter(p => p.tier === 'lock').length;
                 const valueCount = (analysis.picks || []).filter(p => p.tier === 'value').length;

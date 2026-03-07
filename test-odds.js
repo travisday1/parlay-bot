@@ -1,4 +1,5 @@
-const API_KEY = 'ce5dd981993bdc7da50fee7212c1b747';
+require('dotenv').config();
+const API_KEY = process.env.ODDS_API_KEY;
 
 async function testOddsAPI() {
     try {

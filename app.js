@@ -16,16 +16,25 @@ try {
     console.warn('Supabase client not loaded, falling back to REST API');
 }
 
+// ===== AUTH STATE =====
+let currentUser = null;
+let userProfile = null;
+let authMode = 'signin'; // 'signin' or 'signup'
+
+// ===== STRIPE PRICE IDS (replace with actual IDs after Stripe setup) =====
+const STRIPE_PRICES = {
+    plus_monthly: 'price_REPLACE_WITH_ACTUAL_ID',
+    plus_annual: 'price_REPLACE_WITH_ACTUAL_ID',
+    pro_monthly: 'price_REPLACE_WITH_ACTUAL_ID',
+    pro_annual: 'price_REPLACE_WITH_ACTUAL_ID',
+};
+
 // ===== STATE =====
 let GAMES = [];
 let RECOMMENDED_PARLAYS = [];
 let selectedPicks = [];
-let authenticated = false;
 let dataLoaded = false;
 let activeConfFilters = new Set(); // multi-select confidence filter: 'lock', 'lean', 'tossup'
-
-// ===== PASSWORD =====
-const SITE_PASSWORD = 'parlay2026';
 
 // ===== LEAGUE CONFIG =====
 const LEAGUE_MAP = {
@@ -71,40 +80,316 @@ const NCAAB_KEYWORDS = NOTABLE_NCAAB_TEAMS.map(t => t.toLowerCase());
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-    // Set dynamic date
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const dateEl = document.getElementById('header-date');
     if (dateEl) dateEl.textContent = dateStr;
     document.title = `Parlay Bot | ${dateStr}`;
-
     checkAuth();
 });
+async function checkAuth() {
+    const { data: { session } } = await sb.auth.getSession();
 
-// ===== AUTH =====
-function checkAuth() {
-    const stored = sessionStorage.getItem('parlay_auth');
-    if (stored === 'true') { authenticated = true; showApp(); }
-}
-
-function attemptLogin() {
-    const input = document.getElementById('pw-input');
-    const error = document.getElementById('pw-error');
-    if (input.value === SITE_PASSWORD) {
-        authenticated = true;
-        sessionStorage.setItem('parlay_auth', 'true');
+    if (session) {
+        currentUser = session.user;
+        await loadUserProfile();
         showApp();
     } else {
-        error.style.display = 'block';
-        input.value = '';
-        input.classList.add('shake');
-        setTimeout(() => input.classList.remove('shake'), 500);
+        document.getElementById('auth-gate').style.display = 'flex';
+    }
+
+    // Listen for auth state changes (handles OAuth redirects)
+    sb.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+            currentUser = session.user;
+            await loadUserProfile();
+            showApp();
+        } else if (event === 'SIGNED_OUT') {
+            currentUser = null;
+            userProfile = null;
+            document.getElementById('auth-gate').style.display = 'flex';
+            document.getElementById('app-wrapper').style.display = 'none';
+        }
+    });
+}
+
+// ===== AUTH: Load User Profile =====
+async function loadUserProfile() {
+    if (!currentUser) return;
+    const { data: profile, error } = await sb
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+
+    if (error) {
+        console.warn('Profile not found, creating...', error.message);
+        const { data: newProfile } = await sb
+            .from('profiles')
+            .upsert({
+                id: currentUser.id,
+                email: currentUser.email,
+                display_name: currentUser.user_metadata?.full_name || currentUser.email.split('@')[0],
+                avatar_url: currentUser.user_metadata?.avatar_url || null,
+                subscription_tier: 'free'
+            })
+            .select()
+            .single();
+        userProfile = newProfile;
+    } else {
+        userProfile = profile;
+    }
+    // Resolve effective tier: granted_tier overrides subscription_tier
+    if (userProfile) {
+        userProfile.effectiveTier = userProfile.granted_tier || userProfile.subscription_tier || 'free';
     }
 }
 
+// ===== AUTH: Tier Helpers =====
+function getUserTier() {
+    if (!userProfile) return 'free';
+    return userProfile.effectiveTier || 'free';
+}
+function isAdmin() {
+    return userProfile?.is_admin === true;
+}
+
+// ===== AUTH: Email Sign In / Sign Up =====
+async function handleEmailAuth() {
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const errorEl = document.getElementById('auth-error');
+    errorEl.style.display = 'none';
+
+    if (!email || !password) {
+        errorEl.textContent = 'Please enter email and password.';
+        errorEl.style.display = 'block';
+        errorEl.style.color = '#ff5252';
+        return;
+    }
+    if (password.length < 6) {
+        errorEl.textContent = 'Password must be at least 6 characters.';
+        errorEl.style.display = 'block';
+        errorEl.style.color = '#ff5252';
+        return;
+    }
+
+    try {
+        if (authMode === 'signup') {
+            const displayName = document.getElementById('auth-name')?.value?.trim() || '';
+            const { error } = await sb.auth.signUp({
+                email, password,
+                options: { data: { full_name: displayName } }
+            });
+            if (error) throw error;
+            errorEl.textContent = 'Check your email for a confirmation link!';
+            errorEl.style.display = 'block';
+            errorEl.style.color = '#4fc3f7';
+        } else {
+            const { error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            // onAuthStateChange will handle the rest
+        }
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+        errorEl.style.color = '#ff5252';
+    }
+}
+
+// ===== AUTH: Social Login =====
+async function signInWithProvider(provider) {
+    const { error } = await sb.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin + window.location.pathname }
+    });
+    if (error) {
+        const errorEl = document.getElementById('auth-error');
+        errorEl.textContent = error.message;
+        errorEl.style.display = 'block';
+        errorEl.style.color = '#ff5252';
+    }
+}
+
+// ===== AUTH: Toggle Sign In / Sign Up =====
+function toggleAuthMode() {
+    authMode = authMode === 'signin' ? 'signup' : 'signin';
+    const btn = document.getElementById('auth-submit-btn');
+    const link = document.getElementById('auth-toggle-link');
+    const nameField = document.getElementById('auth-name-field');
+
+    if (authMode === 'signup') {
+        btn.textContent = 'Create Account';
+        link.textContent = 'Already have an account? Sign in';
+        nameField.style.display = 'block';
+    } else {
+        btn.textContent = 'Sign In';
+        link.textContent = "Don't have an account? Sign up";
+        nameField.style.display = 'none';
+    }
+    document.getElementById('auth-error').style.display = 'none';
+}
+
+// ===== AUTH: Password Reset =====
+async function sendPasswordReset() {
+    const email = document.getElementById('auth-email').value.trim();
+    const errorEl = document.getElementById('auth-error');
+    if (!email) {
+        errorEl.textContent = 'Enter your email address first.';
+        errorEl.style.display = 'block';
+        errorEl.style.color = '#ff5252';
+        return;
+    }
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+    });
+    if (error) {
+        errorEl.textContent = error.message;
+        errorEl.style.display = 'block';
+        errorEl.style.color = '#ff5252';
+    } else {
+        errorEl.textContent = 'Password reset email sent! Check your inbox.';
+        errorEl.style.display = 'block';
+        errorEl.style.color = '#4fc3f7';
+    }
+}
+
+// ===== AUTH: Sign Out =====
+async function signOut() {
+    await sb.auth.signOut();
+    currentUser = null;
+    userProfile = null;
+    window.location.reload();
+}
+
+// ===== CONTENT GATING =====
+function canAccess(feature) {
+    const tier = getUserTier();
+    const access = {
+        'all_picks': ['plus', 'pro'],
+        'all_parlays': ['plus', 'pro'],
+        'value_parlay': ['free', 'plus', 'pro'],
+        'top_3_locks': ['free', 'plus', 'pro'],
+        'full_rationale': ['plus', 'pro'],
+        'full_confidence': ['plus', 'pro'],
+        'performance_30d': ['plus', 'pro'],
+        'performance_full': ['pro'],
+        'custom_parlay_save': ['plus', 'pro'],
+        'unlimited_saves': ['pro'],
+        'calibration_dashboard': ['pro'],
+        'clv_analysis': ['pro'],
+        'alerts': ['pro'],
+        'no_ads': ['plus', 'pro'],
+    };
+    if (isAdmin()) return true;
+    const allowed = access[feature] || [];
+    return allowed.includes(tier);
+}
+
+// ===== UPGRADE MODAL =====
+function openUpgradeModal() {
+    const existing = document.getElementById('upgrade-modal');
+    if (existing) { existing.style.display = 'flex'; return; }
+    const modal = document.createElement('div');
+    modal.id = 'upgrade-modal';
+    modal.className = 'modal-overlay';
+    modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+    modal.innerHTML = `
+        <div class="modal-card" style="max-width: 600px;">
+            <button class="modal-close" onclick="document.getElementById('upgrade-modal').style.display='none'">✕</button>
+            <h2 style="text-align: center; margin-bottom: 8px;">Unlock Full Access</h2>
+            <p style="text-align: center; color: rgba(255,255,255,0.6); margin-bottom: 24px;">Choose the plan that fits your game</p>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;">
+                <div class="pricing-card">
+                    <h3>Plus</h3>
+                    <div class="pricing-amount">$9.99<span>/mo</span></div>
+                    <ul class="pricing-features">
+                        <li>All picks, all sports</li>
+                        <li>All 3 daily parlays</li>
+                        <li>Full AI rationale</li>
+                        <li>30-day performance history</li>
+                        <li>No ads</li>
+                    </ul>
+                    <button class="pricing-btn" onclick="startCheckout('plus')">Get Plus</button>
+                    <p class="pricing-annual">or $79.99/year (save 33%)</p>
+                </div>
+                <div class="pricing-card featured">
+                    <div class="pricing-badge">BEST VALUE</div>
+                    <h3>Pro</h3>
+                    <div class="pricing-amount">$24.99<span>/mo</span></div>
+                    <ul class="pricing-features">
+                        <li>Everything in Plus</li>
+                        <li>Full performance history + export</li>
+                        <li>Model calibration dashboard</li>
+                        <li>Closing line value analysis</li>
+                        <li>Real-time lock alerts</li>
+                        <li>Discord community access</li>
+                    </ul>
+                    <button class="pricing-btn pro-btn" onclick="startCheckout('pro')">Get Pro</button>
+                    <p class="pricing-annual">or $199.99/year (save 33%)</p>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// ===== STRIPE CHECKOUT =====
+async function startCheckout(tier, annual = false) {
+    const priceKey = `${tier}_${annual ? 'annual' : 'monthly'}`;
+    const priceId = STRIPE_PRICES[priceKey];
+    if (!priceId || priceId.includes('REPLACE')) {
+        alert('Stripe checkout is not configured yet. Contact support.');
+        return;
+    }
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { alert('Please sign in first.'); return; }
+    try {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+                priceId,
+                successUrl: window.location.origin + window.location.pathname + '?checkout=success',
+                cancelUrl: window.location.origin + window.location.pathname + '?checkout=cancel',
+            }),
+        });
+        const { url, error } = await response.json();
+        if (error) throw new Error(error);
+        if (url) window.location.href = url;
+    } catch (err) {
+        console.error('Checkout error:', err);
+        alert('Error starting checkout. Please try again.');
+    }
+}
+
+// ===== USER MENU =====
+function updateUserMenu() {
+    const menuEl = document.getElementById('user-menu');
+    if (!menuEl || !userProfile) return;
+    const tier = getUserTier();
+    const tierBadge = tier === 'pro' ? '⭐ PRO' : tier === 'plus' ? '✅ PLUS' : '🆓 FREE';
+    menuEl.innerHTML = `
+        <div class="user-menu-info">
+            <span class="user-tier-badge tier-${tier}">${tierBadge}</span>
+            <span class="user-name">${userProfile.display_name || userProfile.email || ''}</span>
+        </div>
+        <div class="user-menu-actions">
+            ${tier === 'free' ? '<a href="#" onclick="openUpgradeModal(); return false;" class="upgrade-link">Upgrade</a>' : ''}
+            ${isAdmin() ? '<a href="admin.html" class="admin-link">Admin</a>' : ''}
+            <a href="#" onclick="signOut(); return false;" class="signout-link">Sign Out</a>
+        </div>
+    `;
+}
+
+// ===== SHOW APP =====
 async function showApp() {
-    document.getElementById('password-gate').style.display = 'none';
+    document.getElementById('auth-gate').style.display = 'none';
     document.getElementById('app-wrapper').style.display = 'block';
+    updateUserMenu();
 
     // Load data from Supabase
     await loadLiveData();
@@ -262,8 +547,15 @@ function transformGames(games, picks) {
             return Math.round(100 / (americanOdds + 100) * 100);
         }
 
-        // Home court/ice/field advantage: ~3% boost for home team
-        const HOME_ADVANTAGE = 3;
+        // Home court/ice/field advantage varies by sport
+        const HOME_ADVANTAGE_MAP = {
+            'nba': 3,
+            'ncaab': 4,
+            'nhl': 1.5,
+            'nfl': 2.5,
+            'mlb': 1,
+        };
+        const HOME_ADVANTAGE = HOME_ADVANTAGE_MAP[leagueInfo.id] || 2;
         let homeMLConf = Math.min(97, impliedProb(homeML) + HOME_ADVANTAGE);
         let awayMLConf = Math.max(3, impliedProb(awayML) - HOME_ADVANTAGE);
 
@@ -681,8 +973,18 @@ function createGameCard(game) {
     const favSpreadConf = isFavHome ? game.confidence.spreadHome : game.confidence.spreadAway;
     const dogSpreadConf = isFavHome ? game.confidence.spreadAway : game.confidence.spreadHome;
 
+    // Content gating: free users only see Lock-tier cards fully
+    const isLock = tag.cls === 'lock';
+    const gatedClass = (!canAccess('all_picks') && !isLock) ? ' gated-card' : '';
+    const gateOverlay = (!canAccess('all_picks') && !isLock) ? `
+        <div class="gate-overlay" onclick="openUpgradeModal()">
+            <span class="gate-lock-icon">🔒</span>
+            <span>Upgrade to see all picks</span>
+        </div>` : '';
+
     return `
-        <div class="game-card" data-league="${game.league}" data-id="${game.id}">
+        <div class="game-card${gatedClass}" data-league="${game.league}" data-id="${game.id}">
+            ${gateOverlay}
             <div class="game-card-top">
                 <span class="league-tag ${game.league}">${game.league.toUpperCase()}</span>
                 <span class="confidence-badge ${tag.cls}">${tag.label}</span>
@@ -796,8 +1098,18 @@ function renderRecommendedParlays() {
         const { combinedDecimal, payout } = calculateParlayOdds(parlay.legs.map(l => l.odds));
         const overallConf = calculateOverallConfidence(parlay.legs.map(l => l.conf));
 
+        // Content gating: free users only see 'safe' tier parlay
+        const isSafe = parlay.tier === 'safe';
+        const isGated = !canAccess('all_parlays') && !isSafe;
+        const gatedClass = isGated ? ' gated-card' : '';
+        const gateOverlay = isGated ? `
+            <div class="gate-overlay" onclick="openUpgradeModal()">
+                <span class="gate-lock-icon">🔒</span>
+                <span>Upgrade to unlock all parlays</span>
+            </div>` : '';
         return `
-            <div class="rec-card tier-${parlay.tier}">
+            <div class="rec-card tier-${parlay.tier}${gatedClass}">
+                ${gateOverlay}
                 <div class="rec-header">
                     <div class="rec-title">${parlay.name}</div>
                     <span class="rec-badge ${parlay.tier}">${parlay.badge}</span>
