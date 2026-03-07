@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/travisday1/parlay-bot#readme",
   "dependencies": {
+    "@balldontlie/sdk": "^1.2.2",
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.98.0",
     "dotenv": "^17.3.1",

@@ -8,6 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { enrichGames, formatEnrichmentForPrompt } = require('./enricher');
 const { generateCalibrationContext } = require('./calibrator');
+const { modelAllGames, calculateEV, impliedProbFromOdds, SPORT_CONFIG } = require('./model');
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -62,36 +63,67 @@ Game ${i + 1}: ${g.away_team} @ ${g.home_team}
         const enrichment = formatEnrichmentForPrompt(g);
         if (enrichment) block += enrichment;
 
+        // Append model output if available
+        if (g.modelResult) {
+            const m = g.modelResult;
+            block += `\n  📐 MATHEMATICAL MODEL OUTPUT:`;
+            block += `\n    Home win probability: ${(m.model.homeWinProb * 100).toFixed(1)}%`;
+            block += `\n    Away win probability: ${(m.model.awayWinProb * 100).toFixed(1)}%`;
+            block += `\n    Power rating differential: ${m.model.powerDiff.toFixed(1)} (positive = home advantage)`;
+            if (m.totalProjection) {
+                block += `\n    Projected total: ${m.totalProjection.projectedTotal} (Home ${m.totalProjection.homeProjected} + Away ${m.totalProjection.awayProjected})`;
+            }
+            if (m.bestBet) {
+                block += `\n    Best +EV bet: ${m.bestBet.team} ${m.bestBet.type} (edge: ${(m.bestBet.ev.edge * 100).toFixed(1)}%, EV: ${(m.bestBet.ev.ev * 100).toFixed(1)}%)`;
+            } else {
+                block += `\n    No +EV bet identified by the model`;
+            }
+            if (m.homeStats) {
+                block += `\n    Home stats: NRtg ${m.homeStats.netRating || 'N/A'}, eFG% ${m.homeStats.eFGPct || 'N/A'}, Pace ${m.homeStats.pace || 'N/A'}`;
+            }
+            if (m.awayStats) {
+                block += `\n    Away stats: NRtg ${m.awayStats.netRating || 'N/A'}, eFG% ${m.awayStats.eFGPct || 'N/A'}, Pace ${m.awayStats.pace || 'N/A'}`;
+            }
+        }
+
         return block;
     }).filter(Boolean).join('\n');
 
-    return `You are an elite sports betting analyst AI called "Parlay Bot". Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
+    return `You are an elite sports betting analyst AI called "Parlay Bot". You work WITH a mathematical probability model, not instead of it.
+Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 
-Analyze the following ${sportTitle} games with their DraftKings odds AND enrichment data.
+For each game below, you will see:
+1. The raw odds from DraftKings
+2. Enrichment data (fatigue, injuries, O/U trends, line movement)
+3. The MATHEMATICAL MODEL'S OUTPUT — including independent win probabilities, power ratings, and +EV analysis
 
-For EACH game, use ALL of the following — especially the REAL-TIME DATA provided below each game:
-- The fatigue/schedule data (🔴 Fatigued teams cover the spread ~45% of the time in the NBA)
-- The injury report (missing star players can swing a line 3-5+ points)
-- The recency-weighted O/U trends (recent 5-game trends matter more than season averages)
-- Line movement signals (significant movement = sharp money activity)
-- Current team records and standings (use your training knowledge)
-- Historical matchup trends (use your training knowledge)
+YOUR ROLE: Review the model's probability estimates and ADJUST them if you have contextual information the model cannot capture. You may adjust the model's probability by a MAXIMUM of ±5 percentage points, and you MUST explain WHY you are adjusting.
+
+Examples of valid adjustments:
+- "Model says 62% home win, but their star point guard (30 PPG) was just ruled out 2 hours ago and the line hasn't fully adjusted. Adjusting DOWN to 57%."
+- "Model says 55% away win, but this is a revenge game after a 30-point blowout loss last week and the team has won 8 straight road games. Adjusting UP to 59%."
+- "Model says 51% home win with no +EV. Agree — skip this game."
+
+Examples of INVALID adjustments:
+- Adjusting by more than 5% without extraordinary justification
+- Overriding the model because "I feel like Team X is better"
+- Ignoring the model's +EV analysis entirely
+
+Tier classification is based on edge size from model EV analysis:
+- "lock" = 10%+ edge (strong +EV)
+- "value" = 6-10% edge (moderate +EV)
+- "longshot" = 5-6% edge (marginal +EV)
+- "skip" = No +EV bet found
 
 For each game, produce:
-1. A SIDE pick (moneyline or spread) with a tier classification:
-   - "lock" = 75%+ confidence, strong edge identified
-   - "value" = 60-74% confidence, good value on the line
-   - "longshot" = Below 60% confidence, but the odds offer significant value
-   - "skip" = No clear edge, avoid
-
-2. An OVER/UNDER assessment for every game (even if the side pick is skip).
-   Factor in: team pace, recent scoring trends, injuries to key scorers, fatigue/back-to-backs, and how the posted total compares to recency-weighted averages.
-
-IMPORTANT: Be selective. Only assign "lock" to games where you have VERY HIGH confidence. Most games should be "value" or "skip".
+- Your adjusted probability (if different from model)
+- Whether you agree with the model's +EV recommendation
+- A 2-3 sentence rationale referencing specific data points
+- An O/U assessment if the model projects a total significantly different from the posted line
 
 ${calibrationText || ''}
 
-Here are today's ${sportTitle} games with enrichment data:
+Here are today's ${sportTitle} games with model output and enrichment data:
 ${gameLines}
 
 Respond in VALID JSON format only. No markdown, no explanation outside the JSON.
@@ -101,17 +133,19 @@ Respond in VALID JSON format only. No markdown, no explanation outside the JSON.
       "game_index": 1,
       "away_team": "Team A",
       "home_team": "Team B",
+      "model_home_prob": 0.62,
+      "adjusted_home_prob": 0.57,
+      "adjustment_reason": "Star PG ruled out, line not yet adjusted",
+      "agree_with_model_ev": true,
       "tier": "lock|value|longshot|skip",
       "pick_type": "moneyline|spread|over|under",
-      "picked_team": "Team A or Team B or Over or Under",
-      "picked_odds": -150,
+      "picked_team": "Team B",
+      "picked_odds": -182,
       "picked_line": null,
-      "confidence": 82,
-      "rationale": "2-3 sentence analysis referencing the enrichment data (fatigue, injuries, trends)",
-      "over_confidence": 65,
-      "under_confidence": 35,
+      "confidence": 57,
+      "rationale": "2-3 sentence analysis referencing model data AND contextual factors",
       "ou_pick": "over|under|skip",
-      "ou_rationale": "Why Over or Under based on scoring trends, pace, fatigue, injuries to scorers"
+      "ou_rationale": "O/U reasoning using projected total vs posted line"
     }
   ]
 }`;
@@ -188,6 +222,11 @@ async function storePicks(analysis, games, sportTitle) {
             }
         }
 
+        // Use adjusted probability as confidence when available
+        const finalConfidence = pick.adjusted_home_prob
+            ? Math.round((pick.picked_team === game.home_team ? pick.adjusted_home_prob : (1 - pick.adjusted_home_prob)) * 100)
+            : pick.confidence;
+
         const { error } = await supabase
             .from('daily_picks')
             .upsert({
@@ -198,7 +237,7 @@ async function storePicks(analysis, games, sportTitle) {
                 picked_team: pick.picked_team,
                 picked_odds: pick.picked_odds,
                 picked_line: pickedLine,
-                confidence: pick.confidence,
+                confidence: finalConfidence,
                 rationale: pick.rationale
             }, { onConflict: 'game_id,pick_date,pick_type' });
 
@@ -293,6 +332,41 @@ async function runFullAnalysis() {
 
                 // Enrich games with fatigue, injuries, O/U trends, line movement
                 const enrichedBatch = await enrichGames(batch);
+
+                // Run the mathematical probability model
+                const modelResults = await modelAllGames(enrichedBatch);
+
+                // Attach model results to each game for the AI prompt
+                for (const game of enrichedBatch) {
+                    game.modelResult = modelResults.find(m => m.game_id === game.game_id) || null;
+                }
+
+                // Store model predictions for historical analysis
+                for (const result of modelResults) {
+                    const { error: mpErr } = await supabase.from('model_predictions').upsert({
+                        game_id: result.game_id,
+                        prediction_date: new Date().toISOString().split('T')[0],
+                        sport_key: result.sportKey,
+                        home_win_prob: result.model.homeWinProb,
+                        away_win_prob: result.model.awayWinProb,
+                        power_diff: result.model.powerDiff,
+                        rest_adjustment: result.model.restAdjustment,
+                        projected_total: result.totalProjection?.projectedTotal || null,
+                        home_ml_ev: result.ev.homeML?.ev || null,
+                        away_ml_ev: result.ev.awayML?.ev || null,
+                        over_ev: result.ev.over?.ev || null,
+                        under_ev: result.ev.under?.ev || null,
+                        best_bet_type: result.bestBet?.type || null,
+                        best_bet_team: result.bestBet?.team || null,
+                        best_bet_edge: result.bestBet?.ev?.edge || null,
+                        tier: result.tier,
+                        home_net_rating: result.homeStats?.netRating || null,
+                        away_net_rating: result.awayStats?.netRating || null,
+                        home_efg_pct: result.homeStats?.eFGPct || null,
+                        away_efg_pct: result.awayStats?.eFGPct || null,
+                    }, { onConflict: 'game_id,prediction_date' });
+                    if (mpErr) console.log(`   ⚠️ Error storing model prediction: ${mpErr.message}`);
+                }
 
                 process.stdout.write(`   🤖 Sending to Gemini${batchLabel}...`);
                 const analysis = await analyzeGames(enrichedBatch, sportTitle, calibration.text);
