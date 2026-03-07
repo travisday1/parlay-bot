@@ -251,6 +251,9 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdmtqZnN3Z3R2anh4cXF1eHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NjAzMTcsImV4cCI6MjA4ODMzNjMxN30.3ZB2UwBLXjXY8KPZGAo1vLs39_rhzZ6Jt4l_MhuSwhs';
         const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // Hardcoded admin override — same as app.js
+        const SITE_ADMINS = ['f4128156-bc33-475c-b715-30120b0fb35b'];
+
         let allUsers = [];
         let filteredUsers = [];
         let currentPage = 0;
@@ -261,14 +264,17 @@
             const { data: { session } } = await sb.auth.getSession();
             if (!session) { showDenied(); return; }
 
+            // Hardcoded admin check — bypass RLS
+            const isSiteAdmin = SITE_ADMINS.includes(session.user.id);
+
             const { data: profile } = await sb
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
                 .single();
 
-            if (!profile || !profile.is_admin) { showDenied(); return; }
-            adminProfile = profile;
+            if (!isSiteAdmin && (!profile || !profile.is_admin)) { showDenied(); return; }
+            adminProfile = profile || { id: session.user.id, email: session.user.email, is_admin: true };
 
             document.getElementById('admin-loading').style.display = 'none';
             document.getElementById('admin-app').style.display = 'block';
