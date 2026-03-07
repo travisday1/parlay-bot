@@ -2360,29 +2360,130 @@ body.sidebar-open #app-wrapper {
     border-color: rgba(24, 119, 242, 0.3);
 }
 
-/* ===== USER MENU ===== */
+/* ===== USER MENU DROPDOWN ===== */
 .user-menu {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    position: relative;
 }
 
-.user-menu-info {
+.user-menu-trigger {
     display: flex;
     align-items: center;
     gap: 8px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 10px;
+    transition: background 0.2s;
 }
 
-.user-name {
+.user-menu-trigger:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #818cf8, #c084fc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
     font-size: 0.85rem;
-    color: var(--text-secondary);
-    font-weight: 500;
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    color: white;
+    flex-shrink: 0;
 }
 
+.dropdown-arrow {
+    color: rgba(255, 255, 255, 0.4);
+    transition: transform 0.2s;
+}
+
+.user-dropdown.open~.user-menu-trigger .dropdown-arrow,
+.user-menu-trigger:has(+ .user-dropdown.open) .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.user-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 220px;
+    background: rgba(20, 24, 42, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(20px);
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.user-dropdown.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.dropdown-header {
+    padding: 14px 16px;
+}
+
+.dropdown-user-name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: white;
+}
+
+.dropdown-user-email {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 2px;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    cursor: pointer;
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: white;
+}
+
+.dropdown-icon {
+    font-size: 0.95rem;
+    width: 20px;
+    text-align: center;
+}
+
+.dropdown-item.upgrade-item:hover {
+    color: #60a5fa;
+}
+
+.dropdown-item.admin-item:hover {
+    color: #c084fc;
+}
+
+.dropdown-item.signout-item:hover {
+    color: #f87171;
+}
+
+/* ===== TIER BADGES ===== */
 .user-tier-badge {
     padding: 3px 10px;
     border-radius: 20px;
@@ -2410,34 +2511,127 @@ body.sidebar-open #app-wrapper {
     border: 1px solid rgba(168, 85, 247, 0.3);
 }
 
-.user-menu-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+/* ===== SETTINGS MODAL ===== */
+.settings-card {
+    background: rgba(15, 18, 35, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 28px;
+    width: 420px;
+    max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
 
-.user-menu-actions a {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    text-decoration: none;
-    font-weight: 500;
+.settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.settings-header h2 {
+    font-size: 1.2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #c084fc, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px;
     transition: color 0.2s;
 }
 
-.user-menu-actions a:hover {
-    color: var(--text-primary);
+.modal-close:hover {
+    color: white;
 }
 
-.upgrade-link {
-    color: var(--accent-blue) !important;
+.settings-section {
+    margin-bottom: 18px;
 }
 
-.admin-link {
-    color: var(--accent-purple) !important;
+.settings-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 6px;
 }
 
-.signout-link {
-    color: var(--accent-red) !important;
+.settings-input {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.settings-input:focus {
+    outline: none;
+    border-color: rgba(129, 140, 248, 0.4);
+}
+
+.settings-plan-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.settings-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.settings-save-btn {
+    flex: 1;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.2s;
+}
+
+.settings-save-btn:hover {
+    opacity: 0.9;
+}
+
+.settings-password-btn {
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s, color 0.2s;
+}
+
+.settings-password-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
 }
 
 /* ===== CONTENT GATING ===== */

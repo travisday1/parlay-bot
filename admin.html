@@ -214,7 +214,13 @@
         <div class="admin-container">
             <div class="admin-header">
                 <h1>⚙️ Admin Dashboard</h1>
-                <a href="index.html" class="admin-back">← Back to App</a>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="admin-action-btn grant" onclick="openInviteModal()"
+                        style="padding: 6px 14px; font-size: 0.8rem;">+ Invite User</button>
+                    <a href="index.html" class="admin-back">← Back to App</a>
+                    <a href="#" class="admin-back" onclick="adminSignOut(); return false;" style="color: #f87171;">Sign
+                        Out</a>
+                </div>
             </div>
 
             <!-- Stats -->
@@ -243,6 +249,45 @@
                 </table>
             </div>
             <div class="pagination" id="pagination"></div>
+        </div>
+
+        <!-- Invite User Modal -->
+        <div id="invite-modal"
+            style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1001; display:none; align-items:center; justify-content:center;">
+            <div
+                style="background:rgba(15,18,35,0.97); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:28px; width:400px; max-width:90vw; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3
+                        style="font-size:1.1rem; font-weight:800; background:linear-gradient(135deg,#c084fc,#818cf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+                        + Invite New User</h3>
+                    <button onclick="document.getElementById('invite-modal').style.display='none'"
+                        style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:1.2rem;cursor:pointer;">✕</button>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label
+                        style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:rgba(255,255,255,0.5);margin-bottom:6px;">Email
+                        Address</label>
+                    <input type="email" id="invite-email" placeholder="user@example.com"
+                        style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:white;font-size:0.9rem;font-family:inherit;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label
+                        style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:rgba(255,255,255,0.5);margin-bottom:6px;">Assign
+                        Tier</label>
+                    <select id="invite-tier"
+                        style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:white;font-size:0.9rem;font-family:inherit;box-sizing:border-box;">
+                        <option value="free">Free</option>
+                        <option value="plus">Plus</option>
+                        <option value="pro">Pro</option>
+                    </select>
+                </div>
+                <div id="invite-msg"
+                    style="display:none; margin-bottom:12px; padding:8px 12px; border-radius:8px; font-size:0.85rem;">
+                </div>
+                <button onclick="inviteUser()"
+                    style="width:100%;padding:10px 16px;background:linear-gradient(135deg,#818cf8,#6366f1);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.85rem;cursor:pointer;font-family:inherit;">Send
+                    Invite</button>
+            </div>
         </div>
     </div>
 
@@ -403,6 +448,75 @@
             await loadUsers();
             renderStats();
             renderUsers();
+        }
+
+        // ===== INVITE USER =====
+        function openInviteModal() {
+            const modal = document.getElementById('invite-modal');
+            modal.style.display = 'flex';
+            document.getElementById('invite-email').value = '';
+            document.getElementById('invite-tier').value = 'free';
+            const msg = document.getElementById('invite-msg');
+            msg.style.display = 'none';
+        }
+
+        async function inviteUser() {
+            const email = document.getElementById('invite-email').value.trim();
+            const tier = document.getElementById('invite-tier').value;
+            const msg = document.getElementById('invite-msg');
+
+            if (!email) { showInviteMsg('Please enter an email address.', '#f87171'); return; }
+
+            // Use Supabase magic link invite
+            const { data, error } = await sb.auth.signInWithOtp({
+                email,
+                options: {
+                    shouldCreateUser: true,
+                    emailRedirectTo: window.location.origin + '/parlay-bot/'
+                }
+            });
+
+            if (error) {
+                showInviteMsg('Error: ' + error.message, '#f87171');
+                return;
+            }
+
+            // If a tier is specified, try to set it (this may fail if the profile doesn't exist yet)
+            if (tier !== 'free') {
+                // Wait a moment for the profile trigger to fire
+                setTimeout(async () => {
+                    const { error: updateErr } = await sb
+                        .from('profiles')
+                        .update({
+                            granted_tier: tier,
+                            granted_by: adminProfile.id,
+                            granted_at: new Date().toISOString()
+                        })
+                        .eq('email', email);
+                    if (updateErr) console.warn('Could not set tier yet, user may need to sign in first:', updateErr.message);
+                }, 1000);
+            }
+
+            showInviteMsg(`Invite sent to ${email}! They'll receive a magic link to sign in.`, '#34d399');
+            await loadUsers();
+            renderStats();
+            renderUsers();
+        }
+
+        function showInviteMsg(text, color) {
+            const msg = document.getElementById('invite-msg');
+            msg.textContent = text;
+            msg.style.display = 'block';
+            msg.style.background = color === '#34d399' ? 'rgba(52, 211, 153, 0.1)' : 'rgba(248, 113, 113, 0.1)';
+            msg.style.color = color;
+            msg.style.border = `1px solid ${color}30`;
+        }
+
+        // ===== SIGN OUT =====
+        async function adminSignOut() {
+            if (!confirm('Sign out?')) return;
+            await sb.auth.signOut();
+            window.location.href = 'index.html';
         }
 
         init();

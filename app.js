@@ -387,23 +387,150 @@ async function startCheckout(tier, annual = false) {
     }
 }
 
-// ===== USER MENU =====
+// ===== USER MENU (Dropdown) =====
 function updateUserMenu() {
     const menuEl = document.getElementById('user-menu');
-    if (!menuEl || !userProfile) return;
+    if (!menuEl) return;
     const tier = getUserTier();
     const tierBadge = tier === 'pro' ? '⭐ PRO' : tier === 'plus' ? '✅ PLUS' : '🆓 FREE';
+    const displayName = userProfile?.display_name || userProfile?.email?.split('@')[0] || 'User';
+    const email = currentUser?.email || userProfile?.email || '';
+    const initials = displayName.charAt(0).toUpperCase();
+
     menuEl.innerHTML = `
-        <div class="user-menu-info">
+        <div class="user-menu-trigger" onclick="toggleUserDropdown(event)">
+            <div class="user-avatar">${initials}</div>
             <span class="user-tier-badge tier-${tier}">${tierBadge}</span>
-            <span class="user-name">${userProfile.display_name || userProfile.email || ''}</span>
+            <svg class="dropdown-arrow" width="10" height="6" viewBox="0 0 10 6" fill="none">
+                <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
         </div>
-        <div class="user-menu-actions">
-            ${tier === 'free' ? '<a href="#" onclick="openUpgradeModal(); return false;" class="upgrade-link">Upgrade</a>' : ''}
-            ${isAdmin() ? '<a href="admin.html" class="admin-link">Admin</a>' : ''}
-            <a href="#" onclick="signOut(); return false;" class="signout-link">Sign Out</a>
+        <div class="user-dropdown" id="user-dropdown">
+            <div class="dropdown-header">
+                <div class="dropdown-user-name">${displayName}</div>
+                <div class="dropdown-user-email">${email}</div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <a href="#" class="dropdown-item" onclick="openSettingsModal(); closeUserDropdown(); return false;">
+                <span class="dropdown-icon">⚙️</span> Account Settings
+            </a>
+            ${tier === 'free' ? '<a href="#" class="dropdown-item upgrade-item" onclick="openUpgradeModal(); closeUserDropdown(); return false;"><span class="dropdown-icon">🚀</span> Upgrade Plan</a>' : ''}
+            ${isAdmin() ? '<a href="admin.html" class="dropdown-item admin-item"><span class="dropdown-icon">🛡️</span> Admin Dashboard</a>' : ''}
+            <div class="dropdown-divider"></div>
+            <a href="#" class="dropdown-item signout-item" onclick="signOut(); return false;">
+                <span class="dropdown-icon">🚪</span> Sign Out
+            </a>
         </div>
     `;
+}
+
+function toggleUserDropdown(e) {
+    e.stopPropagation();
+    const dd = document.getElementById('user-dropdown');
+    if (dd) dd.classList.toggle('open');
+}
+function closeUserDropdown() {
+    const dd = document.getElementById('user-dropdown');
+    if (dd) dd.classList.remove('open');
+}
+// Close dropdown when clicking outside
+document.addEventListener('click', () => closeUserDropdown());
+
+// ===== SIGN OUT =====
+async function signOut() {
+    if (!confirm('Are you sure you want to sign out?')) return;
+    await sb.auth.signOut();
+    currentUser = null;
+    userProfile = null;
+    window.location.reload();
+}
+
+// ===== SETTINGS MODAL =====
+function openSettingsModal() {
+    const existing = document.getElementById('settings-modal');
+    if (existing) { existing.style.display = 'flex'; return; }
+
+    const displayName = userProfile?.display_name || '';
+    const email = currentUser?.email || userProfile?.email || '';
+    const tier = getUserTier();
+    const tierLabel = tier === 'pro' ? 'Pro' : tier === 'plus' ? 'Plus' : 'Free';
+
+    const modal = document.createElement('div');
+    modal.id = 'settings-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="settings-card">
+            <div class="settings-header">
+                <h2>⚙️ Account Settings</h2>
+                <button class="modal-close" onclick="document.getElementById('settings-modal').style.display='none'">✕</button>
+            </div>
+
+            <div class="settings-section">
+                <label class="settings-label">Email</label>
+                <input type="text" class="settings-input" value="${email}" disabled style="opacity: 0.6;">
+            </div>
+
+            <div class="settings-section">
+                <label class="settings-label">Display Name</label>
+                <input type="text" class="settings-input" id="settings-display-name" value="${displayName}" placeholder="Enter display name">
+            </div>
+
+            <div class="settings-section">
+                <label class="settings-label">Current Plan</label>
+                <div class="settings-plan-badge tier-${tier}">${tierLabel}</div>
+            </div>
+
+            <div class="settings-actions">
+                <button class="settings-save-btn" onclick="saveSettings()">Save Changes</button>
+                <button class="settings-password-btn" onclick="resetPassword()">Reset Password</button>
+            </div>
+
+            <div id="settings-message" style="display: none; margin-top: 12px; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem;"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+}
+
+async function saveSettings() {
+    const nameInput = document.getElementById('settings-display-name');
+    const msg = document.getElementById('settings-message');
+    if (!nameInput || !msg) return;
+    const newName = nameInput.value.trim();
+    if (!newName) { showSettingsMsg('Please enter a display name.', '#f87171'); return; }
+
+    const { error } = await sb.from('profiles').update({ display_name: newName }).eq('id', currentUser.id);
+    if (error) {
+        showSettingsMsg('Error saving: ' + error.message, '#f87171');
+    } else {
+        if (userProfile) userProfile.display_name = newName;
+        updateUserMenu();
+        showSettingsMsg('Settings saved!', '#34d399');
+    }
+}
+
+async function resetPassword() {
+    const email = currentUser?.email;
+    if (!email) return;
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+    });
+    const msg = document.getElementById('settings-message');
+    if (error) {
+        showSettingsMsg('Error: ' + error.message, '#f87171');
+    } else {
+        showSettingsMsg('Password reset email sent! Check your inbox.', '#34d399');
+    }
+}
+
+function showSettingsMsg(text, color) {
+    const msg = document.getElementById('settings-message');
+    if (!msg) return;
+    msg.textContent = text;
+    msg.style.display = 'block';
+    msg.style.background = color === '#34d399' ? 'rgba(52, 211, 153, 0.1)' : 'rgba(248, 113, 113, 0.1)';
+    msg.style.color = color;
+    msg.style.border = `1px solid ${color}30`;
 }
 
 // ===== SHOW APP =====
