@@ -81,11 +81,16 @@ const SPORT_CONFIG = {
 // Cache team stats to avoid redundant API calls
 const teamStatsCache = {};
 
+// Rate-limit helper: small delay between BDL API calls
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function getNBATeamAdvancedStats(teamName, season) {
     const cacheKey = `${teamName}_${season}`;
     if (teamStatsCache[cacheKey]) return teamStatsCache[cacheKey];
 
     try {
+        await sleep(300); // respect BDL rate limits
+
         // Get all NBA teams to find the team ID
         const teamsResponse = await bdl.nba.getTeams();
         const team = teamsResponse.data.find(t =>
