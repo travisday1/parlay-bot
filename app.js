@@ -35,6 +35,8 @@ const STRIPE_PRICES = {
 
 // ===== STATE =====
 let GAMES = [];
+let PICKED_GAMES = [];
+let SLATE_GAMES = [];
 let RECOMMENDED_PARLAYS = [];
 let selectedPicks = [];
 let dataLoaded = false;
@@ -623,6 +625,21 @@ async function loadLiveData() {
 
         // Transform data into frontend format
         GAMES = transformGames(games, picks);
+
+        // Split into picked games (non-skip, sorted by tier priority) and full slate
+        const TIER_ORDER = { lock: 0, value: 1, longshot: 2 };
+        PICKED_GAMES = GAMES
+            .filter(g => g.tier && g.tier !== 'skip')
+            .sort((a, b) => {
+                const tierDiff = (TIER_ORDER[a.tier] ?? 99) - (TIER_ORDER[b.tier] ?? 99);
+                if (tierDiff !== 0) return tierDiff;
+                // Within same tier, sort by highest confidence descending
+                const aMax = Math.max(a.confidence.homeML, a.confidence.awayML);
+                const bMax = Math.max(b.confidence.homeML, b.confidence.awayML);
+                return bMax - aMax;
+            });
+        SLATE_GAMES = GAMES; // Full slate includes everything
+
         RECOMMENDED_PARLAYS = transformParlays(parlays);
         dataLoaded = true;
 
@@ -653,7 +670,7 @@ async function loadLiveData() {
     } catch (error) {
         console.error('❌ Error loading data from Supabase:', error);
         // Show error state
-        const grid = document.getElementById('games-grid');
+        const grid = document.getElementById('picks-grid');
         if (grid) {
             grid.innerHTML = `
                 <div class="loading-state">
@@ -1063,20 +1080,85 @@ function cityName(teamName) {
     return words.slice(0, -1).join(' '); // Everything except last word
 }
 
-// ===== RENDER GAMES =====
+// ===== RENDER PICKS + FULL SLATE =====
 function renderGames() {
-    const grid = document.getElementById('games-grid');
-    if (GAMES.length === 0 && dataLoaded) {
-        grid.innerHTML = '<div class="loading-state"><p>No games scheduled for today. Check back later!</p></div>';
-        return;
+    // === PICKS SECTION (primary — only games with AI picks) ===
+    const picksGrid = document.getElementById('picks-grid');
+    const noPicksMsg = document.getElementById('no-picks-msg');
+
+    if (PICKED_GAMES.length === 0 && dataLoaded) {
+        if (picksGrid) picksGrid.innerHTML = '';
+        if (noPicksMsg) noPicksMsg.style.display = 'block';
+    } else {
+        if (noPicksMsg) noPicksMsg.style.display = 'none';
+        if (picksGrid) picksGrid.innerHTML = PICKED_GAMES.map(game => createGameCard(game)).join('');
     }
-    grid.innerHTML = GAMES.map(game => createGameCard(game)).join('');
 
     // Update tier counters on confidence filter buttons
     updateTierCounters();
 
     // Apply confidence filter after rendering
     applyConfidenceFilter();
+
+    // === FULL SLATE SECTION (secondary — all games, compact) ===
+    renderSlate();
+}
+
+// IDs of games that have picks (for the "Pick ↑" indicator in slate)
+function getPickedGameIds() {
+    return new Set(PICKED_GAMES.map(g => g.id));
+}
+
+function renderSlate() {
+    const slateGrid = document.getElementById('slate-grid');
+    if (!slateGrid) return;
+
+    if (SLATE_GAMES.length === 0 && dataLoaded) {
+        slateGrid.innerHTML = '<div class="loading-state"><p>No games scheduled for today.</p></div>';
+        return;
+    }
+
+    const pickedIds = getPickedGameIds();
+    slateGrid.innerHTML = SLATE_GAMES.map(game => createSlateRow(game, pickedIds.has(game.id))).join('');
+}
+
+function createSlateRow(game, hasPick) {
+    const pickIndicator = hasPick
+        ? '<span class="slate-pick-indicator" title="Bot pick above">🤖 Pick ↑</span>'
+        : '';
+
+    const spreadLabel = game.spread.value !== 0
+        ? `${game.spread.team} ${game.spread.value}`
+        : 'PK';
+
+    return `
+        <div class="slate-row" data-league="${game.league}" data-id="${game.id}">
+            <div class="slate-time">
+                <span class="league-tag ${game.league}" style="font-size:0.65rem;padding:2px 6px;">${game.league.toUpperCase()}</span>
+                <span>${game.time}</span>
+            </div>
+            <div class="slate-matchup">
+                <span class="slate-team">${game.away.abbr}</span>
+                <span class="slate-vs">@</span>
+                <span class="slate-team">${game.home.abbr}</span>
+                ${pickIndicator}
+            </div>
+            <div class="slate-odds">
+                <div class="slate-odds-cell">
+                    <span class="slate-odds-label">ML</span>
+                    <span class="slate-odds-val">${formatOdds(game.moneyline.away)} / ${formatOdds(game.moneyline.home)}</span>
+                </div>
+                <div class="slate-odds-cell">
+                    <span class="slate-odds-label">Spread</span>
+                    <span class="slate-odds-val">${spreadLabel}</span>
+                </div>
+                <div class="slate-odds-cell">
+                    <span class="slate-odds-label">O/U</span>
+                    <span class="slate-odds-val">${game.overUnder.total || '—'}</span>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function getConfidenceClass(conf) {
@@ -1669,11 +1751,20 @@ function filterGames(league) {
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.filter === league);
     });
+    // Apply to pick cards
     document.querySelectorAll('.game-card').forEach(card => {
         if (league === 'all' || card.dataset.league === league) {
             card.classList.remove('hidden');
         } else {
             card.classList.add('hidden');
+        }
+    });
+    // Apply to slate rows
+    document.querySelectorAll('.slate-row').forEach(row => {
+        if (league === 'all' || row.dataset.league === league) {
+            row.classList.remove('hidden');
+        } else {
+            row.classList.add('hidden');
         }
     });
 }
@@ -2349,7 +2440,7 @@ if ('IntersectionObserver' in window) {
 
     // Wait for DOM to be ready before observing
     document.addEventListener('DOMContentLoaded', () => {
-        ['performance-section', 'recommended-section', 'games-section'].forEach(id => {
+        ['performance-section', 'recommended-section', 'picks-section', 'slate-section'].forEach(id => {
             const el = document.getElementById(id);
             if (el) navObserver.observe(el);
         });

@@ -89,7 +89,7 @@ Game ${i + 1}: ${g.away_team} @ ${g.home_team}
         return block;
     }).filter(Boolean).join('\n');
 
-    return `You are an elite sports betting analyst AI called "Parlay Bot". You work WITH a mathematical probability model, not instead of it.
+    return `You are a sports betting VALIDATOR called "Parlay Bot". Your job is to CONFIRM or REJECT the mathematical model's picks — NOT to generate your own.
 Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 
 For each game below, you will see:
@@ -97,29 +97,28 @@ For each game below, you will see:
 2. Enrichment data (fatigue, injuries, O/U trends, line movement)
 3. The MATHEMATICAL MODEL'S OUTPUT — including independent win probabilities, power ratings, and +EV analysis
 
-YOUR ROLE: Review the model's probability estimates and ADJUST them if you have contextual information the model cannot capture. You may adjust the model's probability by a MAXIMUM of ±5 percentage points, and you MUST explain WHY you are adjusting.
+YOUR ROLE: You are a FILTER, not a generator. Your job is to:
+1. CONFIRM model picks that align with the enrichment context (injuries support the edge, fatigue favors the pick, etc.)
+2. REJECT model picks where contextual data contradicts the edge (star player just ruled out, line has already moved past the value, etc.)
+3. You may adjust the model's probability by a MAXIMUM of ±3 percentage points (NOT ±5) — only for concrete, verifiable reasons like a confirmed injury.
 
-Examples of valid adjustments:
-- "Model says 62% home win, but their star point guard (30 PPG) was just ruled out 2 hours ago and the line hasn't fully adjusted. Adjusting DOWN to 57%."
-- "Model says 55% away win, but this is a revenge game after a 30-point blowout loss last week and the team has won 8 straight road games. Adjusting UP to 59%."
-- "Model says 51% home win with no +EV. Agree — skip this game."
+CRITICAL RULES:
+- If the model says "No +EV bet found" → you MUST output tier: "skip". Do NOT invent picks.
+- You may NOT upgrade a "longshot" to a "lock". You may only DOWNGRADE tiers or leave them.
+- You may NOT adjust probabilities based on narratives ("revenge game", "team is hot", "rivalry"). Only adjust for: confirmed injuries, confirmed rest advantages, extreme weather, or line movement signals.
+- VOLUME CONTROL: Out of all games presented, you should skip at LEAST 40% of them. If the model found +EV on a game but the edge is small (under 5%), default to skip unless enrichment data strongly confirms the edge.
 
-Examples of INVALID adjustments:
-- Adjusting by more than 5% without extraordinary justification
-- Overriding the model because "I feel like Team X is better"
-- Ignoring the model's +EV analysis entirely
-
-Tier classification is based on edge size from model EV analysis:
-- "lock" = 10%+ edge (strong +EV)
-- "value" = 6-10% edge (moderate +EV)
-- "longshot" = 5-6% edge (marginal +EV)
-- "skip" = No +EV bet found
+Tier classification (set by the model, you can only downgrade):
+- "lock" = 8%+ edge (strong +EV, confirmed by context)
+- "value" = 5-8% edge (moderate +EV)  
+- "longshot" = 3-5% edge (marginal +EV, only take with strong contextual support)
+- "skip" = No +EV or context contradicts the edge
 
 For each game, produce:
-- Your adjusted probability (if different from model)
-- Whether you agree with the model's +EV recommendation
-- A 2-3 sentence rationale referencing specific data points
-- An O/U assessment if the model projects a total significantly different from the posted line
+- Whether you CONFIRM or REJECT the model's recommendation
+- Your adjusted probability (if different from model, max ±3%)
+- A 1-2 sentence rationale referencing SPECIFIC data points (not narratives)
+- An O/U assessment ONLY if the model projects a total 3+ points different from the posted line
 
 ${calibrationText || ''}
 
@@ -134,8 +133,8 @@ Respond in VALID JSON format only. No markdown, no explanation outside the JSON.
       "away_team": "Team A",
       "home_team": "Team B",
       "model_home_prob": 0.62,
-      "adjusted_home_prob": 0.57,
-      "adjustment_reason": "Star PG ruled out, line not yet adjusted",
+      "adjusted_home_prob": 0.60,
+      "adjustment_reason": "No adjustment — model aligns with context",
       "agree_with_model_ev": true,
       "tier": "lock|value|longshot|skip",
       "pick_type": "moneyline|spread|over|under",
@@ -143,7 +142,7 @@ Respond in VALID JSON format only. No markdown, no explanation outside the JSON.
       "picked_odds": -182,
       "picked_line": null,
       "confidence": 57,
-      "rationale": "2-3 sentence analysis referencing model data AND contextual factors",
+      "rationale": "1-2 sentence analysis referencing SPECIFIC model data AND contextual factors",
       "ou_pick": "over|under|skip",
       "ou_rationale": "O/U reasoning using projected total vs posted line"
     }
@@ -222,10 +221,22 @@ async function storePicks(analysis, games, sportTitle) {
             }
         }
 
-        // Use adjusted probability as confidence when available
-        const finalConfidence = pick.adjusted_home_prob
-            ? Math.round((pick.picked_team === game.home_team ? pick.adjusted_home_prob : (1 - pick.adjusted_home_prob)) * 100)
-            : pick.confidence;
+        // REVISED: Confidence should reflect our certainty in the EDGE, not the raw win prob.
+        // A 55% win probability bet might have a strong edge vs the line, or no edge at all.
+        // Use the model's edge (model prob - implied prob) scaled to a confidence score.
+        // Edge of 3% → ~55 confidence, 5% → ~65, 8% → ~75, 12%+ → ~85+
+        let finalConfidence = pick.confidence; // AI's confidence as fallback
+
+        const modelResult = game.modelResult;
+        if (modelResult?.bestBet?.ev?.edge) {
+            const edgePct = modelResult.bestBet.ev.edge * 100; // e.g. 0.08 → 8
+            // Scale edge to confidence: base 50 + edge * 4, capped at 90
+            finalConfidence = Math.min(90, Math.max(50, Math.round(50 + edgePct * 4)));
+        } else if (pick.adjusted_home_prob) {
+            // If no model result but AI adjusted, use the AI's number (capped)
+            const rawProb = pick.picked_team === game.home_team ? pick.adjusted_home_prob : (1 - pick.adjusted_home_prob);
+            finalConfidence = Math.min(85, Math.round(rawProb * 100));
+        }
 
         const { error } = await supabase
             .from('daily_picks')
@@ -371,6 +382,19 @@ async function runFullAnalysis() {
                 process.stdout.write(`   🤖 Sending to Gemini${batchLabel}...`);
                 const analysis = await analyzeGames(enrichedBatch, sportTitle, calibration.text);
 
+                // === EDGE FLOOR FILTER ===
+                // Reject picks where the mathematical model's edge is below 3%
+                for (const pick of (analysis.picks || [])) {
+                    if (pick.tier === 'skip') continue;
+                    const gameIdx = pick.game_index - 1;
+                    const game = enrichedBatch[gameIdx];
+                    const modelEdge = game?.modelResult?.bestBet?.ev?.edge;
+                    if (modelEdge != null && modelEdge < 0.03) {
+                        console.log(`   ⚠️ Edge floor: rejected ${pick.picked_team} ${pick.pick_type} — model edge only ${(modelEdge * 100).toFixed(1)}%`);
+                        pick.tier = 'skip';
+                    }
+                }
+
                 const lockCount = (analysis.picks || []).filter(p => p.tier === 'lock').length;
                 const valueCount = (analysis.picks || []).filter(p => p.tier === 'value').length;
                 const longshotCount = (analysis.picks || []).filter(p => p.tier === 'longshot').length;
@@ -393,6 +417,7 @@ async function runFullAnalysis() {
                     if (pick.tier !== 'skip') {
                         const gameIdx = pick.game_index - 1;
                         const game = batch[gameIdx];
+                        const modelEdge = game?.modelResult?.bestBet?.ev?.edge || 0;
                         allPicksForParlays.push({
                             sport: sportTitle,
                             team: pick.picked_team,
@@ -401,6 +426,8 @@ async function runFullAnalysis() {
                             odds: pick.picked_odds,
                             confidence: pick.confidence,
                             tier: pick.tier,
+                            edge: modelEdge,
+                            game_id: game?.game_id || null,
                             game: game ? `${game.away_team} @ ${game.home_team}` : '',
                         });
                     }
@@ -413,6 +440,32 @@ async function runFullAnalysis() {
         } catch (error) {
             console.error(`   ❌ Error analyzing ${sportTitle}:`, error.message);
         }
+    }
+
+    // === HARD PICK COUNT CAP ===
+    // Keep only the top 12 picks by model edge across all sports
+    const PICK_CAP = 12;
+    if (allPicksForParlays.length > PICK_CAP) {
+        // Sort by edge descending — highest edge first
+        allPicksForParlays.sort((a, b) => b.edge - a.edge);
+        const culled = allPicksForParlays.splice(PICK_CAP);
+        console.log(`\n⚠️ Volume cap: kept top ${PICK_CAP} picks, culled ${culled.length} lower-edge picks`);
+
+        // Delete culled picks from Supabase
+        const today = new Date().toISOString().split('T')[0];
+        for (const drop of culled) {
+            if (!drop.game_id) continue;
+            const { error } = await supabase
+                .from('daily_picks')
+                .delete()
+                .eq('game_id', drop.game_id)
+                .eq('pick_date', today)
+                .eq('pick_type', drop.type);
+            if (error) {
+                console.log(`   ⚠️ Could not delete culled pick ${drop.team}: ${error.message}`);
+            }
+        }
+        console.log(`   🗑️ Deleted ${culled.length} culled picks from daily_picks`);
     }
 
     // PHASE 2: Build cross-sport parlays from all collected picks

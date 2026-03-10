@@ -2887,3 +2887,125 @@ select option {
     background: #14182a;
     color: #fff;
 }
+
+/* ===== FULL SLATE SECTION ===== */
+.slate-section {
+    opacity: 0.92;
+}
+
+.slate-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.slate-row {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.slate-row:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.slate-row.hidden {
+    display: none;
+}
+
+.slate-time {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.slate-matchup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.slate-team {
+    font-size: 0.88rem;
+    letter-spacing: 0.5px;
+}
+
+.slate-vs {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 400;
+}
+
+.slate-pick-indicator {
+    font-size: 0.68rem;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(168, 85, 247, 0.15));
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: #93c5fd;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 4px;
+    white-space: nowrap;
+}
+
+.slate-odds {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.slate-odds-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 70px;
+}
+
+.slate-odds-label {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.slate-odds-val {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* Responsive: stack slate rows on mobile */
+@media (max-width: 600px) {
+    .slate-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+        padding: 8px 12px;
+    }
+
+    .slate-time {
+        flex-direction: row;
+        gap: 8px;
+    }
+
+    .slate-odds {
+        gap: 8px;
+        justify-content: space-between;
+    }
+
+    .slate-odds-cell {
+        min-width: 55px;
+    }
+}

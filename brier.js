@@ -72,6 +72,8 @@ async function computeBrierScore(lookbackDays = 30) {
 }
 
 async function computeCLV(lookbackDays = 14) {
+    const { impliedProbFromOdds } = require('./model');
+
     // Compare the odds at pick time to closing odds (last snapshot before game)
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - lookbackDays);
@@ -79,10 +81,22 @@ async function computeCLV(lookbackDays = 14) {
 
     const { data: picks } = await supabase
         .from('daily_picks')
-        .select('game_id, pick_type, picked_team, picked_odds, created_at')
+        .select('game_id, pick_type, picked_team, picked_odds, picked_line, created_at')
         .gte('pick_date', startStr);
 
     if (!picks || picks.length === 0) return { avgCLV: null, totalPicks: 0 };
+
+    // Build a map of game_id → {home_team, away_team} so we know which side was picked
+    const gameIds = [...new Set(picks.map(p => p.game_id))];
+    const gameMap = {};
+    for (let i = 0; i < gameIds.length; i += 100) {
+        const batch = gameIds.slice(i, i + 100);
+        const { data: games } = await supabase
+            .from('games')
+            .select('game_id, home_team, away_team')
+            .in('game_id', batch);
+        (games || []).forEach(g => { gameMap[g.game_id] = g; });
+    }
 
     let clvSum = 0;
     let clvCount = 0;
@@ -91,7 +105,7 @@ async function computeCLV(lookbackDays = 14) {
         // Get closing odds (last snapshot before game time)
         const { data: closingOdds } = await supabase
             .from('odds_history')
-            .select('home_odds, away_odds, over_odds, under_odds')
+            .select('home_odds, away_odds, home_point, away_point, over_odds, under_odds')
             .eq('game_id', pick.game_id)
             .order('captured_at', { ascending: false })
             .limit(1);
@@ -100,18 +114,42 @@ async function computeCLV(lookbackDays = 14) {
 
         const pickOdds = parseFloat(pick.picked_odds);
         const closing = closingOdds[0];
+        const game = gameMap[pick.game_id];
 
         // Determine closing odds for the picked side
         let closingPickOdds;
-        if (pick.pick_type === 'over') closingPickOdds = parseFloat(closing.over_odds);
-        else if (pick.pick_type === 'under') closingPickOdds = parseFloat(closing.under_odds);
-        else {
-            // Moneyline or spread — use placeholder since we'd need game data
-            closingPickOdds = pickOdds;
+        if (pick.pick_type === 'over') {
+            closingPickOdds = parseFloat(closing.over_odds);
+        } else if (pick.pick_type === 'under') {
+            closingPickOdds = parseFloat(closing.under_odds);
+        } else if (pick.pick_type === 'moneyline' && game) {
+            // Moneyline: use closing home/away odds based on which team was picked
+            if (pick.picked_team === game.home_team) {
+                closingPickOdds = parseFloat(closing.home_odds);
+            } else if (pick.picked_team === game.away_team) {
+                closingPickOdds = parseFloat(closing.away_odds);
+            }
+        } else if (pick.pick_type === 'spread' && game) {
+            // Spread: compare closing spread to pick-time spread
+            // A tighter closing spread means the market moved toward our pick (positive CLV)
+            const pickLine = parseFloat(pick.picked_line) || 0;
+            let closingLine;
+            if (pick.picked_team === game.home_team) {
+                closingLine = parseFloat(closing.home_point);
+            } else if (pick.picked_team === game.away_team) {
+                closingLine = parseFloat(closing.away_point);
+            }
+            if (closingLine != null && !isNaN(closingLine)) {
+                // Convert spread advantage into implied probability shift
+                // Each point of spread movement ≈ 3% implied probability
+                const spreadShift = (closingLine - pickLine) * 0.03;
+                clvSum += spreadShift;
+                clvCount++;
+            }
+            continue; // Already handled — skip the odds-based CLV below
         }
 
-        if (closingPickOdds && closingPickOdds !== pickOdds) {
-            const { impliedProbFromOdds } = require('./model');
+        if (closingPickOdds && !isNaN(closingPickOdds) && closingPickOdds !== pickOdds) {
             const pickImplied = impliedProbFromOdds(pickOdds);
             const closingImplied = impliedProbFromOdds(closingPickOdds);
             const clv = closingImplied - pickImplied;
