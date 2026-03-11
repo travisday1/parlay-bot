@@ -661,12 +661,14 @@ async function loadLiveData() {
         const spinner = document.getElementById('loading-spinner');
         if (spinner) spinner.style.display = 'none';
 
-        // Update "Last Updated" timestamp
-        if (games && games.length > 0) {
-            const latestUpdate = games.reduce((latest, g) => {
-                const t = new Date(g.updated_at || g.created_at || 0);
-                return t > latest ? t : latest;
-            }, new Date(0));
+        // Update "Last Updated" timestamp — use the most recent created_at from games, picks, or parlays
+        const allTimestamps = [
+            ...(games || []).map(g => new Date(g.created_at || 0)),
+            ...(picks || []).map(p => new Date(p.created_at || 0)),
+            ...(parlays || []).map(p => new Date(p.created_at || 0)),
+        ];
+        if (allTimestamps.length > 0) {
+            const latestUpdate = allTimestamps.reduce((latest, t) => t > latest ? t : latest, new Date(0));
             const lastUpdEl = document.getElementById('last-updated-time');
             if (lastUpdEl) {
                 lastUpdEl.textContent = latestUpdate.toLocaleString('en-US', {
@@ -1023,23 +1025,24 @@ function transformParlays(parlays) {
 
             return {
                 originalName: p.name,
+                originalTier: p.tier,
                 minConf,
                 legs: validLegs,
                 rationale: p.rationale || 'AI-generated parlay combination.',
             };
         })
-        .filter(p => p.legs.length >= 2) // Drop parlays with fewer than 2 valid legs
+        .filter(p => p.legs.length >= 1) // Allow single-leg parlays (e.g. Safe Bag override)
         .sort((a, b) => b.minConf - a.minConf); // Best (highest min confidence) first
 
-    // Assign names and badges by RANK (not by AI's original tier)
-    const rankNames = ['🔒 The Safe Bag', '⚡ The Value Play', '🎲 The Big Swing'];
-    const rankBadges = ['Highest Confidence', 'Best Value', 'High Risk / High Reward'];
-    const rankTiers = ['lock', 'strong', 'value'];
+    // Use the AI's ORIGINAL tier from the database, not positional re-ranking
+    const tierNames = { 'safe': '🔒 The Safe Bag', 'value': '⚡ The Value Play', 'longshot': '🎲 The Big Swing' };
+    const tierBadges = { 'safe': 'Highest Confidence', 'value': 'Best Value', 'longshot': 'High Risk / High Reward' };
+    const tierClasses = { 'safe': 'safe', 'value': 'value', 'longshot': 'longshot' };
 
-    return processed.map((p, i) => ({
-        name: rankNames[i] || p.originalName,
-        tier: rankTiers[i] || 'value',
-        badge: rankBadges[i] || 'AI Parlay',
+    return processed.map((p) => ({
+        name: tierNames[p.originalTier] || p.originalName,
+        tier: tierClasses[p.originalTier] || 'value',
+        badge: tierBadges[p.originalTier] || 'AI Parlay',
         legs: p.legs,
         rationale: p.rationale,
     }));
