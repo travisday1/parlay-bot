@@ -615,7 +615,7 @@ Respond in VALID JSON only:
             if (hasUnderdog) {
                 console.log(`   ⚠️ WARNING: Gemini hallucinated an underdog in The Safe Bag. Overriding programmatically...`);
                 const safeFavorites = allPicks
-                    .filter(p => p.odds <= -110)
+                    .filter(p => p.type === 'moneyline' && p.odds < 0)
                     .sort((a, b) => a.odds - b.odds); // most negative first
 
                 if (safeFavorites.length >= 3) {

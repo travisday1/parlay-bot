@@ -1012,11 +1012,14 @@ function transformParlays(parlays) {
                     odds: leg.odds || -110,
                     conf: realConf,
                     game: leg.game || '',
+                    pick_type: leg.pick_type || 'moneyline',
+                    picked_line: leg.picked_line || null
                 };
             }).filter(Boolean);
 
             // Recalculate quality from actual leg confidences
             const minConf = validLegs.length > 0 ? Math.min(...validLegs.map(l => l.conf)) : 0;
+
 
             return {
                 originalName: p.name,
