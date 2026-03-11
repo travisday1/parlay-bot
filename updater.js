@@ -25,6 +25,13 @@ const TARGET_SPORTS = [
     { key: 'icehockey_nhl', title: 'NHL' },
     // Baseball (seasonal)
     { key: 'baseball_mlb', title: 'MLB' },
+    // Soccer
+    { key: 'soccer_usa_mls', title: 'MLS' },
+    { key: 'soccer_epl', title: 'English Premier League' },
+    { key: 'soccer_spain_la_liga', title: 'La Liga' },
+    { key: 'soccer_germany_bundesliga', title: 'Bundesliga' },
+    { key: 'soccer_france_ligue_one', title: 'Ligue 1' },
+    { key: 'soccer_italy_serie_a', title: 'Serie A' },
 ];
 
 async function fetchOddsForSport(sport) {

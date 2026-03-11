@@ -18,12 +18,19 @@ const supabase = createClient(
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Group games by sport for batched analysis
-const US_SPORT_KEYS = [
+const ALL_SPORT_KEYS = [
     'basketball_nba',
     'basketball_ncaab',
     'icehockey_nhl',
     'americanfootball_nfl',
     'baseball_mlb',
+    // Soccer
+    'soccer_usa_mls',
+    'soccer_epl',
+    'soccer_spain_la_liga',
+    'soccer_germany_bundesliga',
+    'soccer_france_ligue_one',
+    'soccer_italy_serie_a',
 ];
 
 async function fetchTodaysGames() {
@@ -38,7 +45,7 @@ async function fetchTodaysGames() {
             *,
             odds (*)
         `)
-        .in('sport_key', US_SPORT_KEYS)
+        .in('sport_key', ALL_SPORT_KEYS)
         .gte('commence_time', today.toISOString())
         .lte('commence_time', tomorrow.toISOString())
         .order('commence_time', { ascending: true });
@@ -591,6 +598,7 @@ Respond in VALID JSON only:
             return {
                 game_id: leg.game_id || match?.game_id || null,
                 team: teamName,
+                picked_team: teamName,
                 pick_type: leg.pick_type || match?.type || 'moneyline',
                 picked_line: leg.picked_line != null ? leg.picked_line : (match?.picked_line || null),
                 odds: leg.odds || match?.odds || 0,

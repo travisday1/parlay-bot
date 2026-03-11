@@ -14,12 +14,19 @@ const supabase = createClient(
 
 const ODDS_API_KEY = process.env.ODDS_API_KEY;
 
-const US_SPORT_KEYS = [
+const ALL_SPORT_KEYS = [
     'basketball_nba',
     'basketball_ncaab',
     'icehockey_nhl',
     'americanfootball_nfl',
     'baseball_mlb',
+    // Soccer
+    'soccer_usa_mls',
+    'soccer_epl',
+    'soccer_spain_la_liga',
+    'soccer_germany_bundesliga',
+    'soccer_france_ligue_one',
+    'soccer_italy_serie_a',
 ];
 
 // ===== FETCH COMPLETED SCORES =====
@@ -189,7 +196,7 @@ async function runSettler() {
     games.forEach(g => { gameMap[g.game_id] = g; });
 
     // Step 4: Fetch scores from The-Odds-API for each sport
-    const sportKeys = [...new Set(games.map(g => g.sport_key).filter(k => US_SPORT_KEYS.includes(k)))];
+    const sportKeys = [...new Set(games.map(g => g.sport_key).filter(k => ALL_SPORT_KEYS.includes(k)))];
     const allScores = {};
 
     for (const sportKey of sportKeys) {

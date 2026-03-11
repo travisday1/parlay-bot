@@ -49,7 +49,19 @@ const LEAGUE_MAP = {
     'icehockey_nhl': { id: 'nhl', icon: '🏒', label: 'NHL' },
     'americanfootball_nfl': { id: 'nfl', icon: '🏈', label: 'NFL' },
     'baseball_mlb': { id: 'mlb', icon: '⚾', label: 'MLB' },
+    // Soccer
+    'soccer_usa_mls': { id: 'mls', icon: '⚽', label: 'MLS' },
+    'soccer_epl': { id: 'epl', icon: '⚽', label: 'EPL' },
+    'soccer_spain_la_liga': { id: 'laliga', icon: '⚽', label: 'La Liga' },
+    'soccer_germany_bundesliga': { id: 'bundesliga', icon: '⚽', label: 'Bundesliga' },
+    'soccer_france_ligue_one': { id: 'ligue1', icon: '⚽', label: 'Ligue 1' },
+    'soccer_italy_serie_a': { id: 'seriea', icon: '⚽', label: 'Serie A' },
 };
+
+// ===== MODEL EPOCH =====
+// Performance tracker will not look back before this date.
+// Reset this when the model is updated to start fresh tracking.
+const MODEL_EPOCH = '2026-03-11';
 
 // ===== NCAAB FILTER: Top 25 + Power Conference Programs =====
 const NOTABLE_NCAAB_TEAMS = [
@@ -726,6 +738,8 @@ function transformGames(games, picks) {
             'nhl': 1.5,
             'nfl': 2.5,
             'mlb': 1,
+            'mls': 2, 'epl': 2, 'laliga': 2,
+            'bundesliga': 2, 'ligue1': 2, 'seriea': 2,
         };
         const HOME_ADVANTAGE = HOME_ADVANTAGE_MAP[leagueInfo.id] || 2;
         let homeMLConf = Math.min(97, impliedProb(homeML) + HOME_ADVANTAGE);
@@ -990,7 +1004,7 @@ function transformParlays(parlays) {
         .map(p => {
             // Map legs and filter out any where the game isn't in our analyzed GAMES array
             const validLegs = (p.legs || []).map(leg => {
-                const teamName = leg.picked_team || leg.team || '?';
+                const teamName = leg.team || leg.picked_team || leg.pick || '?';
                 const realConf = lookupConfidence(teamName, leg.odds, leg.game);
                 if (realConf === null) return null; // Game not in GAMES — skip this leg
                 return {
@@ -1054,12 +1068,46 @@ function abbreviate(teamName) {
         'Anaheim Ducks': 'ANA', 'San Jose Sharks': 'SJS', 'Seattle Kraken': 'SEA',
         'Carolina Hurricanes': 'CAR', 'New Jersey Devils': 'NJD', 'New York Islanders': 'NYI',
         'Washington Capitals': 'WSH', 'Montreal Canadiens': 'MTL', 'Ottawa Senators': 'OTT',
-        // Soccer
-        'Bayern Munich': 'BAY', 'Real Madrid': 'RMA', 'FC Barcelona': 'BAR',
+        // Soccer — EPL
         'Manchester City': 'MCI', 'Manchester United': 'MUN', 'Liverpool': 'LIV',
         'Arsenal': 'ARS', 'Chelsea': 'CHE', 'Tottenham Hotspur': 'TOT',
-        'Inter Milan': 'INT', 'AC Milan': 'MIL', 'Juventus': 'JUV',
-        'Borussia Dortmund': 'BVB', 'Atletico Madrid': 'ATM',
+        'Newcastle United': 'NEW', 'Aston Villa': 'AVL', 'Brighton and Hove Albion': 'BHA',
+        'West Ham United': 'WHU', 'Crystal Palace': 'CRY', 'Fulham': 'FUL',
+        'Brentford': 'BRE', 'Wolverhampton Wanderers': 'WOL', 'Nottingham Forest': 'NFO',
+        'Everton': 'EVE', 'Bournemouth': 'BOU', 'Leicester City': 'LEI',
+        'Ipswich Town': 'IPS', 'Southampton': 'SOU',
+        // Soccer — La Liga
+        'Real Madrid': 'RMA', 'FC Barcelona': 'BAR', 'Atletico Madrid': 'ATM',
+        'Real Sociedad': 'RSO', 'Real Betis': 'BET', 'Athletic Bilbao': 'ATH',
+        'Villarreal': 'VIL', 'Girona': 'GIR', 'Sevilla': 'SEV', 'Valencia': 'VAL',
+        'Celta Vigo': 'CEL', 'Osasuna': 'OSA', 'Getafe': 'GET', 'Mallorca': 'MLL',
+        // Soccer — Bundesliga
+        'Bayern Munich': 'BAY', 'Borussia Dortmund': 'BVB', 'RB Leipzig': 'RBL',
+        'Bayer Leverkusen': 'LEV', 'VfB Stuttgart': 'STU', 'Eintracht Frankfurt': 'SGE',
+        'SC Freiburg': 'SCF', 'VfL Wolfsburg': 'WOB', 'TSG Hoffenheim': 'TSG',
+        'Borussia Monchengladbach': 'BMG', 'Union Berlin': 'FCU', 'Werder Bremen': 'SVW',
+        // Soccer — Ligue 1
+        'Paris Saint Germain': 'PSG', 'Olympique de Marseille': 'OM', 'AS Monaco': 'MON',
+        'Olympique Lyonnais': 'OL', 'LOSC Lille': 'LIL', 'OGC Nice': 'NIC',
+        'RC Lens': 'LEN', 'Stade Rennais': 'REN', 'RC Strasbourg': 'STR',
+        // Soccer — Serie A
+        'Inter Milan': 'INT', 'AC Milan': 'ACM', 'Juventus': 'JUV',
+        'SSC Napoli': 'NAP', 'AS Roma': 'ROM', 'SS Lazio': 'LAZ',
+        'Atalanta': 'ATA', 'ACF Fiorentina': 'FIO', 'Bologna': 'BOL',
+        'Torino': 'TOR', 'Udinese': 'UDI', 'Genoa': 'GEN',
+        // Soccer — MLS
+        'Atlanta United': 'ATL', 'Austin FC': 'ATX', 'CF Montreal': 'MTL',
+        'Charlotte FC': 'CLT', 'Chicago Fire': 'CHI', 'Cincinnati': 'CIN',
+        'Colorado Rapids': 'COL', 'Columbus Crew': 'CLB', 'DC United': 'DCU',
+        'FC Dallas': 'DAL', 'Houston Dynamo': 'HOU', 'Inter Miami': 'MIA',
+        'LA Galaxy': 'LAG', 'Los Angeles FC': 'LAFC', 'Minnesota United': 'MIN',
+        'Nashville SC': 'NSH', 'New England Revolution': 'NER',
+        'New York City FC': 'NYC', 'New York Red Bulls': 'NYRB',
+        'Orlando City': 'ORL', 'Philadelphia Union': 'PHI',
+        'Portland Timbers': 'POR', 'Real Salt Lake': 'RSL',
+        'San Jose Earthquakes': 'SJE', 'Seattle Sounders': 'SEA',
+        'Sporting Kansas City': 'SKC', 'St Louis City': 'STL',
+        'Toronto FC': 'TFC', 'Vancouver Whitecaps': 'VAN',
     };
     if (abbrevMap[teamName]) return abbrevMap[teamName];
     // Fallback: take first 3 letters of last word
@@ -1190,7 +1238,8 @@ function getOverallConfidenceTag(game) {
 
 function createGameCard(game) {
     const isNHL = game.league === 'nhl';
-    const isSoccer = game.league === 'mls';
+    const SOCCER_LEAGUES = ['mls', 'epl', 'laliga', 'bundesliga', 'ligue1', 'seriea'];
+    const isSoccer = SOCCER_LEAGUES.includes(game.league);
     const spreadLabel = isNHL ? 'Puck Line' : isSoccer ? 'Handicap' : 'Spread';
     const ouLabel = isNHL ? 'O/U Goals' : isSoccer ? 'O/U Goals' : 'O/U Points';
     const tag = getOverallConfidenceTag(game);
@@ -2092,6 +2141,12 @@ const SPORT_LABELS = {
     icehockey_nhl: 'NHL',
     baseball_mlb: 'MLB',
     americanfootball_nfl: 'NFL',
+    soccer_usa_mls: 'MLS',
+    soccer_epl: 'EPL',
+    soccer_spain_la_liga: 'La Liga',
+    soccer_germany_bundesliga: 'Bundesliga',
+    soccer_france_ligue_one: 'Ligue 1',
+    soccer_italy_serie_a: 'Serie A',
 };
 
 const BET_TYPE_LABELS = {
@@ -2221,7 +2276,9 @@ function getDateRange(days) {
     start.setDate(start.getDate() - days);
 
     const fmt = d => d.toISOString().split('T')[0];
-    return { startDate: fmt(start), endDate: fmt(end) };
+    // Clamp to model epoch — never look back before the current model version
+    const startDate = fmt(start) < MODEL_EPOCH ? MODEL_EPOCH : fmt(start);
+    return { startDate, endDate: fmt(end) };
 }
 
 function setPerformanceRange(days) {
@@ -2256,7 +2313,9 @@ function showCustomRange() {
     if (startInput && !startInput.value) {
         const d = new Date();
         d.setDate(d.getDate() - 30);
-        startInput.value = d.toISOString().split('T')[0];
+        const defaultStart = d.toISOString().split('T')[0];
+        startInput.value = defaultStart < MODEL_EPOCH ? MODEL_EPOCH : defaultStart;
+        startInput.min = MODEL_EPOCH;
     }
 }
 
