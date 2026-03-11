@@ -1,0 +1,116 @@
+version: '3.9'
+
+# ═══════════════════════════════════════════════════
+# DIGITAL EMPIRE — Docker Compose Stack
+# Runs SEPARATELY from day4ai stack
+# ═══════════════════════════════════════════════════
+
+services:
+  # ── Scheduler / Orchestrator ──
+  scheduler:
+    build: ./scheduler
+    container_name: empire-scheduler
+    restart: always
+    volumes:
+      - ./context:/app/context
+      - ./outputs:/app/outputs
+      - ./prompts:/app/prompts
+      - ./logs:/app/logs
+      - ./shared:/app/shared
+    env_file: .env
+    networks:
+      - empire-net
+
+  # ── API Bridge (REST endpoint for Antigravity) ──
+  api-bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile.bridge
+    container_name: empire-api-bridge
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:5050:5050'  # Only accessible via localhost/SSH tunnel
+    volumes:
+      - ./logs:/app/logs
+    env_file: .env
+    networks:
+      - empire-net
+
+  # ── Digital Products Engine (Phase 1) ──
+  digital-products:
+    build: ./engines/digital-products
+    container_name: engine-digital-products
+    restart: unless-stopped
+    volumes:
+      - ./context:/app/context
+      - ./outputs/digital-products:/app/outputs
+      - ./shared:/app/shared
+    env_file: .env
+    networks:
+      - empire-net
+    profiles:
+      - phase1
+
+  # ── Print on Demand Engine (Phase 1) ──
+  pod-engine:
+    build: ./engines/pod
+    container_name: engine-pod
+    restart: unless-stopped
+    volumes:
+      - ./context:/app/context
+      - ./outputs/pod:/app/outputs
+      - ./shared:/app/shared
+    env_file: .env
+    networks:
+      - empire-net
+    profiles:
+      - phase1
+
+  # ── E-book Publishing Engine (Phase 2) ──
+  ebook-engine:
+    build: ./engines/ebooks
+    container_name: engine-ebooks
+    restart: unless-stopped
+    volumes:
+      - ./context:/app/context
+      - ./outputs/ebooks:/app/outputs
+      - ./shared:/app/shared
+    env_file: .env
+    networks:
+      - empire-net
+    profiles:
+      - phase2
+
+  # ── Affiliate Marketing Engine (Phase 2) ──
+  affiliate-engine:
+    build: ./engines/affiliate
+    container_name: engine-affiliate
+    restart: unless-stopped
+    volumes:
+      - ./context:/app/context
+      - ./outputs/affiliate:/app/outputs
+      - ./shared:/app/shared
+    env_file: .env
+    networks:
+      - empire-net
+    profiles:
+      - phase2
+
+  # ── AI Influencer Engine (Phase 3) ──
+  influencer-engine:
+    build: ./engines/influencer
+    container_name: engine-influencer
+    restart: unless-stopped
+    volumes:
+      - ./context:/app/context
+      - ./outputs/influencer:/app/outputs
+      - ./shared:/app/shared
+    env_file: .env
+    networks:
+      - empire-net
+    profiles:
+      - phase3
+
+networks:
+  empire-net:
+    external: true

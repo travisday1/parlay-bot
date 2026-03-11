@@ -115,8 +115,7 @@ function isValidOddsData(odds) {
         && Math.abs(odds.away_odds) <= 10000;
 
     const validSpread = odds.home_point !== null
-        && odds.home_point !== undefined
-        && odds.home_point !== 0;
+        && odds.home_point !== undefined;
 
     const validTotal = odds.over_point !== null
         && odds.over_point !== undefined

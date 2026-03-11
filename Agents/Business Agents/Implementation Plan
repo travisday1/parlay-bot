@@ -1,0 +1,272 @@
+# Day4ai Cross-Functional AI Agent Infrastructure
+
+Build a self-hosted AI agent team on the existing Hostinger VPS using **n8n** as the orchestration backbone, powered by **Gemini** and **Claude** APIs. Three C-suite agents — Chief of Staff, Chief Automation Officer, and Chief Strategy Officer — will operate as always-on business partners for Day4ai's portfolio of ventures (FairScreen, OpenClaw/ClawDeploy, D&D Sim4Fun, and future projects).
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Claude API Key Needed**: Gemini API keys are confirmed available via Google AI Studio ✅. You'll still need an API key from [Anthropic Console](https://console.anthropic.com/) (pay-as-you-go) for Claude-powered reasoning tasks.
+
+> [!WARNING]
+> **Cost Model**: Estimates assume moderate usage (~50 interactions/day across all 3 agents). Heavy-use days will spike costs. Start with **Gemini 2.5 Flash** for routine tasks and **Claude Sonnet 4.5** for deep reasoning only.
+
+> [!NOTE]
+> **Firebase Integration**: You have 6 existing Firebase projects. We'll create a new **`day4ai-hub`** project as the central nervous system for agent state, shared knowledge, and cross-project visibility. Existing projects: `dnd-sim4fun`, `daysrentals-7ccbb`, `material-participation-state`, `str-manager-5b401`, `str-rental-analyzer`, `yosemite-sanctuary`.
+
+---
+
+## Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Hostinger VPS (Ubuntu 24.02)"
+        subgraph "Docker Compose Stack"
+            N8N["🔧 n8n<br/>Workflow Engine"]
+            PG["🗄️ PostgreSQL<br/>n8n Persistence"]
+            QDRANT["🧠 Qdrant<br/>Vector DB / Memory"]
+        end
+        TS["🔒 Tailscale<br/>Secure Access"]
+    end
+
+    subgraph "Firebase (day4ai-hub)"
+        FS["📄 Firestore<br/>Agent State & Logs"]
+        FA["🔐 Firebase Auth<br/>Access Control"]
+    end
+
+    subgraph "AI Models (API)"
+        GF["⚡ Gemini 2.5 Flash<br/>Routine Tasks"]
+        GP["🧠 Gemini 2.5 Pro<br/>Complex Analysis"]
+        CS["🎯 Claude Sonnet 4.5<br/>Deep Reasoning"]
+    end
+
+    subgraph "C-Suite Agents"
+        COS["👔 Chief of Staff<br/>Coordination & Reporting"]
+        CAO["⚙️ Chief Automation Officer<br/>Agent Creation & Ops"]
+        CSO["📊 Chief Strategy Officer<br/>Planning & Forecasting"]
+    end
+
+    TRAVIS["👤 Travis<br/>CEO / Founder"] -->|Interacts via| N8N
+    N8N --> COS
+    N8N --> CAO
+    N8N --> CSO
+    COS --> GF
+    COS --> CS
+    CAO --> GF
+    CAO --> GP
+    CSO --> CS
+    CSO --> GP
+    N8N --> PG
+    N8N --> QDRANT
+    N8N --> FS
+    N8N --> FA
+    TS -->|Secure Tunnel| N8N
+```
+
+---
+
+## Proposed Changes
+
+### Infrastructure Foundation (VPS Docker Stack)
+
+Deploy n8n + PostgreSQL + Qdrant as a Docker Compose stack on the Hostinger VPS.
+
+#### [NEW] `docker-compose.yml` (on VPS at `/opt/day4ai/docker-compose.yml`)
+
+The compose file will define:
+- **n8n** container (port 5678 → exposed via Tailscale/reverse proxy)
+- **PostgreSQL 16** container for n8n's workflow persistence
+- **Qdrant** container for agent long-term memory / vector search
+- Shared Docker network, persistent volumes, environment configuration
+
+#### [NEW] `.env` (on VPS at `/opt/day4ai/.env`)
+
+Environment variables for:
+- `N8N_ENCRYPTION_KEY` — secure key for credential encryption
+- `POSTGRES_PASSWORD` — database credentials
+- `GEMINI_API_KEY` — Google AI Studio API key (✅ available)
+- `ANTHROPIC_API_KEY` — Anthropic Console API key (needs setup)
+- `FIREBASE_SERVICE_ACCOUNT` — Firebase admin SDK credentials
+- Timezone, webhook URL, basic auth settings
+
+---
+
+### Firebase Hub Project (`day4ai-hub`)
+
+A new Firebase project to serve as centralized infrastructure across all Day4ai ventures.
+
+#### Firestore Collections
+- **`agents/`** — Agent registry (status, config, last active, performance metrics)
+- **`conversations/`** — Chat history per agent session (searchable, auditable)
+- **`tasks/`** — Cross-venture task tracking (assigned agent, status, due date)
+- **`reports/`** — Generated briefings, strategy docs, forecasts
+- **`ventures/`** — Portfolio metadata (FairScreen, OpenClaw, D&D Sim4Fun, etc.)
+
+#### Firebase Auth
+- Email/password for Travis + future partners (1–3)
+- Controls access to n8n dashboard and agent chat interface
+
+---
+
+### Agent Design: System Prompts & Personalities
+
+Each agent gets a detailed system prompt that defines their role, personality, decision-making framework, and communication style. These will be stored as reusable templates.
+
+#### [NEW] `agents/chief-of-staff.md`
+
+**Role**: Personal assistant, operations coordinator, information aggregator.
+
+**Core responsibilities**:
+- Daily briefings: summarize overnight activity, upcoming deadlines, open issues
+- Status tracking across all ventures (FairScreen, OpenClaw, D&D Sim4Fun)
+- Gathering reports from CAO and CSO and synthesizing for Travis
+- Re-delegating tasks and informing downstream agent teams
+- Flagging risks, blockers, and items needing CEO attention
+- Calendar/priority management
+
+**LLM Assignment**: Gemini 2.5 Flash (routine) + Claude Sonnet 4.5 (synthesis & nuance)
+
+#### [NEW] `agents/chief-automation-officer.md`
+
+**Role**: Agent architect, automation strategist, operational optimizer.
+
+**Core responsibilities**:
+- Designing and deploying new agent employees (AEs) based on business needs
+- Creating n8n workflows for recurring business processes
+- Monitoring agent performance and suggesting improvements
+- Maintaining the agent registry (who does what, health status)
+- Technical feasibility assessment for new automation ideas
+- Managing the n8n instance health
+
+**LLM Assignment**: Gemini 2.5 Flash (routine) + Gemini 2.5 Pro (architecture/complex logic)
+
+#### [NEW] `agents/chief-strategy-officer.md`
+
+**Role**: Strategic advisor, business analyst, scenario planner.
+
+**Core responsibilities**:
+- Business feasibility analysis for new ventures
+- Market research synthesis and competitive landscape analysis
+- Revenue/cost forecasting and scenario modeling
+- Strategic recommendations with pros/cons/risks
+- Challenge assumptions — act as devil's advocate
+- Long-term roadmap planning across the portfolio
+
+**LLM Assignment**: Claude Sonnet 4.5 (primary — best for nuanced reasoning) + Gemini 2.5 Pro (data analysis)
+
+---
+
+### n8n Workflow Implementation
+
+#### [NEW] `workflows/cos-daily-briefing.json`
+
+Scheduled trigger (e.g., 8 AM daily) that:
+1. Pulls status from GitHub repos (issues, PRs, commits across all projects)
+2. Checks pending tasks from previous day
+3. Generates a structured daily briefing via LLM
+4. Delivers to Travis via preferred channel (email, webhook, or n8n chat)
+
+#### [NEW] `workflows/agent-chat-interface.json`
+
+Webhook-triggered workflow providing a chat interface:
+1. Receives user message + target agent (CoS/CAO/CSO)
+2. Loads agent system prompt and conversation memory from Qdrant
+3. Routes to appropriate LLM based on message complexity
+4. Stores conversation in memory, returns response
+
+#### [NEW] `workflows/cso-strategy-session.json`
+
+On-demand workflow for deep strategy sessions:
+1. User provides a topic/question
+2. CSO does multi-step research (web search, internal knowledge)
+3. Generates structured analysis with recommendations
+4. Optionally loops in CoS for operational impact assessment
+
+#### [NEW] `workflows/cao-agent-builder.json`
+
+Workflow for the CAO to design new agents:
+1. Receives business need / automation requirement
+2. Generates agent specification (role, prompts, triggers, tools)
+3. Proposes n8n workflow design
+4. After approval, creates the workflow in n8n via API
+
+---
+
+## Monthly Cost Estimate
+
+### Already Paid (Existing Infrastructure)
+
+| Item | Cost | Notes |
+|------|------|-------|
+| Hostinger VPS | ~$10–15/mo | Already subscribed (32GB RAM, 8 vCPU) |
+| Google Gemini Ultra | $19.99/mo | Consumer subscription (not API) |
+| Claude Pro | $20/mo | Consumer subscription (not API) |
+| Perplexity Pro | $20/mo | Research tool |
+| Tailscale | Free tier | Up to 100 devices |
+| **Subtotal (existing)** | **~$70–75/mo** | |
+
+### New Costs (Agent Infrastructure)
+
+| Item | Est. Cost | Notes |
+|------|-----------|-------|
+| n8n (self-hosted) | $0 | Open source, runs on existing VPS |
+| PostgreSQL | $0 | Runs on existing VPS |
+| Qdrant | $0 | Runs on existing VPS |
+| Firebase (Spark/free) | $0 | Firestore free tier: 1GB storage, 50K reads/day |
+| **Gemini API (Flash)** | **~$5–15/mo** | ~50 routine queries/day. Flash at $0.15/1M input ✅ key available |
+| **Gemini API (Pro)** | **~$10–25/mo** | ~10 complex queries/day for CAO/CSO deep work |
+| **Claude API (Sonnet)** | **~$15–40/mo** | ~15 reasoning-heavy queries/day for CSO/CoS synthesis |
+| Domain (day4ai.tech) | Already owned | Subdomain `agents.day4ai.tech` for n8n |
+| **Subtotal (new)** | **~$30–80/mo** | Scales with usage |
+
+### Total Monthly Estimate
+
+| Scenario | Monthly Total | Notes |
+|----------|---------------|-------|
+| 🟢 Light use | ~$100/mo | Minimal agent interactions |
+| 🟡 Moderate use | ~$120/mo | ~50 agent interactions/day |
+| 🔴 Heavy use | ~$155/mo | Deep strategy sessions, heavy automation |
+
+> [!TIP]
+> **Cost control strategy**: Start with Gemini 2.5 Flash for 80% of tasks — it's incredibly cheap ($0.15/M input tokens). Reserve Claude Sonnet and Gemini Pro for complex reasoning only. Set up usage alerts in both API consoles. Batch processing (Claude offers 50% discount) can further reduce costs.
+
+### VPS Resource Allocation
+
+Your 32GB RAM / 8 vCPU VPS is **more than sufficient**. Estimated resource usage:
+
+| Service | RAM | CPU | Storage |
+|---------|-----|-----|---------|
+| n8n | 1–2 GB | 0.5–1 core | 5 GB |
+| PostgreSQL | 1–2 GB | 0.5 core | 10 GB |
+| Qdrant | 1–2 GB | 0.5 core | 5 GB |
+| Existing containers | varies | varies | varies |
+| **Headroom remaining** | **~26 GB** | **~6 cores** | **~380 GB** |
+
+---
+
+## Verification Plan
+
+### Automated Tests
+1. **Docker health check**: After deploying the compose stack, run `docker compose ps` — all 3 services should show `healthy` status
+2. **n8n API test**: `curl http://localhost:5678/healthz` should return 200
+3. **Qdrant API test**: `curl http://localhost:6333/healthz` should return OK
+4. **PostgreSQL test**: `docker exec day4ai-postgres pg_isready` should show accepting connections
+
+### Manual Verification
+1. **Access n8n dashboard** via `https://agents.day4ai.tech` (or Tailscale IP:5678) and confirm login works
+2. **Test agent chat**: Send a message to each agent (CoS, CAO, CSO) and verify they respond in character with their defined personality
+3. **Test daily briefing**: Manually trigger the CoS daily briefing workflow and verify it pulls GitHub data and generates a coherent summary
+4. **Test memory**: Have a multi-turn conversation with an agent, then start a new session — verify they recall prior context via Qdrant
+
+---
+
+## Implementation Order
+
+1. **Infrastructure first**: Docker Compose stack on VPS (n8n + PostgreSQL + Qdrant)
+2. **Agent prompts**: Write and polish system prompts for all 3 agents
+3. **Chat interface**: Build the webhook-based chat workflow in n8n
+4. **Daily briefing**: Build the CoS scheduled briefing workflow
+5. **Strategy session**: Build the CSO deep-dive workflow
+6. **Agent builder**: Build the CAO agent creation workflow
+7. **Iterate**: Refine based on real usage

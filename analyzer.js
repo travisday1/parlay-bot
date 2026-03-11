@@ -317,7 +317,7 @@ async function runFullAnalysis() {
         const validML = odds.home_odds && odds.away_odds
             && Math.abs(odds.home_odds) <= 10000
             && Math.abs(odds.away_odds) <= 10000;
-        const validSpread = odds.home_point !== null && odds.home_point !== undefined && odds.home_point !== 0;
+        const validSpread = odds.home_point !== null && odds.home_point !== undefined;
         const validTotal = odds.over_point !== null && odds.over_point !== undefined && odds.over_point !== 0;
         if (!validML || !validSpread || !validTotal) {
             console.log(`   🚫 Filtered ${g.away_team} @ ${g.home_team} from analysis — invalid market data (spread: ${odds.home_point}, total: ${odds.over_point}, ML: ${odds.home_odds}/${odds.away_odds})`);
@@ -607,9 +607,37 @@ Respond in VALID JSON only:
             };
         });
 
-        const combinedOdds = calculateParlayOdds(normalizedLegs);
+        let finalLegs = normalizedLegs;
+
+        // Programmatic override for Safe Bag hallucinations
+        if (parlay.tier === 'safe') {
+            const hasUnderdog = finalLegs.some(l => l.odds > -100);
+            if (hasUnderdog) {
+                console.log(`   ⚠️ WARNING: Gemini hallucinated an underdog in The Safe Bag. Overriding programmatically...`);
+                const safeFavorites = allPicks
+                    .filter(p => p.odds <= -110)
+                    .sort((a, b) => a.odds - b.odds); // most negative first
+
+                if (safeFavorites.length >= 3) {
+                    finalLegs = safeFavorites.slice(0, 3).map(match => ({
+                        game_id: match.game_id,
+                        team: match.team,
+                        picked_team: match.team,
+                        pick_type: match.type,
+                        picked_line: match.picked_line || null,
+                        odds: match.odds,
+                        confidence: match.confidence,
+                        game: match.game
+                    }));
+                } else {
+                    console.log(`   ⚠️ Could not override Safe Bag: not enough heavy favorites available.`);
+                }
+            }
+        }
+
+        const combinedOdds = calculateParlayOdds(finalLegs);
         const payoutOn100 = Math.round(combinedOdds * 100 * 100) / 100;
-        const avgConfidence = Math.round(normalizedLegs.reduce((s, l) => s + l.confidence, 0) / normalizedLegs.length);
+        const avgConfidence = Math.round(finalLegs.reduce((s, l) => s + l.confidence, 0) / finalLegs.length);
 
         const { error } = await supabase
             .from('recommended_parlays')
@@ -617,7 +645,7 @@ Respond in VALID JSON only:
                 parlay_date: new Date().toISOString().split('T')[0],
                 tier: parlay.tier,
                 name: parlay.name,
-                legs: normalizedLegs,
+                legs: finalLegs,
                 combined_odds: combinedOdds,
                 payout_on_100: payoutOn100,
                 confidence: avgConfidence,

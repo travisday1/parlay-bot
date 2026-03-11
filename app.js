@@ -1407,15 +1407,29 @@ function renderRecommendedParlays() {
                     <span class="rec-badge ${parlay.tier}">${parlay.badge}</span>
                 </div>
                 <div class="rec-legs">
-                    ${parlay.legs.map(leg => `
+                    ${parlay.legs.map(leg => {
+            let betLabel = 'ML';
+            let badgeClass = 'badge-ml';
+            if (leg.pick_type === 'spread') {
+                const lineText = leg.picked_line > 0 ? `+${leg.picked_line}` : leg.picked_line;
+                betLabel = lineText;
+                badgeClass = 'badge-pts';
+            } else if (leg.pick_type === 'over' || leg.pick_type === 'under') {
+                const prefix = leg.pick_type === 'over' ? 'O' : 'U';
+                betLabel = `${prefix}${leg.picked_line}`;
+                badgeClass = 'badge-ou';
+            }
+
+            return `
                         <div class="rec-leg">
-                            <span class="rec-leg-team">${leg.team}</span>
+                            <span class="rec-leg-team">${leg.team} <span class="bet-type-badge ${badgeClass}">${betLabel}</span></span>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span class="pick-conf-inline ${getConfidenceClass(leg.conf)}">${leg.conf}%</span>
                                 <span class="rec-leg-odds">${formatOdds(leg.odds)} · ${leg.game}</span>
                             </div>
                         </div>
-                    `).join('')}
+                        `;
+        }).join('')}
                 </div>
                 <div class="rec-footer">
                     <div class="rec-payout">

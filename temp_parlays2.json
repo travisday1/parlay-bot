@@ -1,0 +1,111 @@
+﻿[dotenv@17.3.1] injecting env (6) from .env -- tip: ΓÜÖ∩╕Å  load multiple .env files with { path: ['.env.local', '.env'] }
+[
+  {
+    "tier": "value",
+    "legs": [
+      {
+        "game": "Houston Rockets @ Denver Nuggets",
+        "odds": -110,
+        "team": "Over",
+        "game_id": "dc635f9b3f854e9881597341b126a1ff",
+        "pick_type": "over",
+        "confidence": 75,
+        "picked_line": 230.5,
+        "picked_team": "Over"
+      },
+      {
+        "game": "Cincinnati Bearcats @ UCF Knights",
+        "odds": 130,
+        "team": "UCF Knights",
+        "game_id": "70e740a1d8083b08e7650929e8d160ec",
+        "pick_type": "moneyline",
+        "confidence": 60,
+        "picked_line": null,
+        "picked_team": "UCF Knights"
+      },
+      {
+        "game": "BYU Cougars @ West Virginia Mountaineers",
+        "odds": 164,
+        "team": "West Virginia Mountaineers",
+        "game_id": "e6e26557b7e9986eda5f30cdc5a2ac97",
+        "pick_type": "moneyline",
+        "confidence": 60,
+        "picked_line": null,
+        "picked_team": "West Virginia Mountaineers"
+      }
+    ],
+    "combined_odds": 10.59
+  },
+  {
+    "tier": "longshot",
+    "legs": [
+      {
+        "game": "Air Force Falcons @ Nevada Wolf Pack",
+        "odds": 1700,
+        "team": "Air Force Falcons",
+        "game_id": "aad1811b51c5b25c3e698704729fabac",
+        "pick_type": "moneyline",
+        "confidence": 45,
+        "picked_line": null,
+        "picked_team": "Air Force Falcons"
+      },
+      {
+        "game": "Charlotte Hornets @ Sacramento Kings",
+        "odds": 500,
+        "team": "Sacramento Kings",
+        "game_id": "9456ca1700b88516e897b6814de3681c",
+        "pick_type": "moneyline",
+        "confidence": 37,
+        "picked_line": null,
+        "picked_team": "Sacramento Kings"
+      },
+      {
+        "game": "New York Knicks @ Utah Jazz",
+        "odds": 650,
+        "team": "Utah Jazz",
+        "game_id": "6df2d79d5f33a116e65cebdf6b58df62",
+        "pick_type": "moneyline",
+        "confidence": 40,
+        "picked_line": null,
+        "picked_team": "Utah Jazz"
+      }
+    ],
+    "combined_odds": 809
+  },
+  {
+    "tier": "safe",
+    "legs": [
+      {
+        "game": "Cincinnati Bearcats @ UCF Knights",
+        "odds": -110,
+        "team": "Cincinnati Bearcats",
+        "game_id": "70e740a1d8083b08e7650929e8d160ec",
+        "pick_type": "spread",
+        "confidence": 55,
+        "picked_line": -2.5,
+        "picked_team": "Cincinnati Bearcats"
+      },
+      {
+        "game": "Xavier Musketeers @ Marquette Golden Eagles",
+        "odds": -110,
+        "team": "Marquette Golden Eagles",
+        "game_id": "9dc2849b2e9fa5c3e95846529824129d",
+        "pick_type": "spread",
+        "confidence": 55,
+        "picked_line": -4.5,
+        "picked_team": "Marquette Golden Eagles"
+      },
+      {
+        "game": "BYU Cougars @ West Virginia Mountaineers",
+        "odds": -110,
+        "team": "BYU Cougars",
+        "game_id": "e6e26557b7e9986eda5f30cdc5a2ac97",
+        "pick_type": "spread",
+        "confidence": 55,
+        "picked_line": -3.5,
+        "picked_team": "BYU Cougars"
+      }
+    ],
+    "combined_odds": 5.96
+  }
+]
