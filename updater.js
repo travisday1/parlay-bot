@@ -101,6 +101,23 @@ function parseOdds(game, sportTitle) {
     return { gameRecord, oddsRecord };
 }
 
+// Validate odds data — reject games with incomplete or extreme market data
+function isValidOddsData(odds) {
+    const validML = odds.home_odds && odds.away_odds
+        && Math.abs(odds.home_odds) <= 10000
+        && Math.abs(odds.away_odds) <= 10000;
+
+    const validSpread = odds.home_point !== null
+        && odds.home_point !== undefined
+        && odds.home_point !== 0;
+
+    const validTotal = odds.over_point !== null
+        && odds.over_point !== undefined
+        && odds.over_point !== 0;
+
+    return validML && validSpread && validTotal;
+}
+
 async function updateAllSports() {
     console.log('🚀 PARLAY BOT — Full Multi-Sport Odds Update');
     console.log(`📅 ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`);
@@ -109,6 +126,7 @@ async function updateAllSports() {
     const allGames = [];
     const allOdds = [];
     let totalGames = 0;
+    let skippedOdds = 0;
 
     // Collect all games
     for (const sport of TARGET_SPORTS) {
@@ -133,7 +151,16 @@ async function updateAllSports() {
             for (const game of games) {
                 const { gameRecord, oddsRecord } = parseOdds(game, sport.title);
                 allGames.push(gameRecord);
-                if (oddsRecord) allOdds.push(oddsRecord);
+
+                if (oddsRecord) {
+                    // Validate odds data — skip games with incomplete or extreme market data
+                    if (isValidOddsData(oddsRecord)) {
+                        allOdds.push(oddsRecord);
+                    } else {
+                        skippedOdds++;
+                        console.log(`   ⚠️ Skipping odds for ${game.away_team} @ ${game.home_team} — incomplete market data (spread: ${oddsRecord.home_point}, total: ${oddsRecord.over_point}, ML: ${oddsRecord.home_odds}/${oddsRecord.away_odds})`);
+                    }
+                }
                 totalGames++;
             }
         } catch (error) {
@@ -143,7 +170,7 @@ async function updateAllSports() {
 
 
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`📦 Total: ${totalGames} games across all sports`);
+    console.log(`📦 Total: ${totalGames} games across all sports${skippedOdds > 0 ? ` (${skippedOdds} odds skipped — invalid data)` : ''}`);
     console.log('💾 Saving to Supabase...');
 
     // Batch upsert games

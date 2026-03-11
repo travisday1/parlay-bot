@@ -169,7 +169,7 @@ async function analyzeGames(games, sportTitle, calibrationText) {
     const prompt = buildAnalysisPrompt(games, sportTitle, calibrationText);
 
     const model = genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.1-pro-preview',
         generationConfig: {
             temperature: 0.3,
             responseMimeType: 'application/json'
@@ -300,8 +300,29 @@ async function runFullAnalysis() {
     console.log('='.repeat(60));
 
     // Fetch all today's games from Supabase
-    const allGames = await fetchTodaysGames();
-    console.log(`\n📦 Found ${allGames.length} games in the database for today.\n`);
+    const rawGames = await fetchTodaysGames();
+    console.log(`\n📦 Found ${rawGames.length} games in the database for today.`);
+
+    // Filter out games with invalid/incomplete market data
+    const allGames = rawGames.filter(g => {
+        const odds = g.odds?.[0];
+        if (!odds) return false;
+        const validML = odds.home_odds && odds.away_odds
+            && Math.abs(odds.home_odds) <= 10000
+            && Math.abs(odds.away_odds) <= 10000;
+        const validSpread = odds.home_point !== null && odds.home_point !== undefined && odds.home_point !== 0;
+        const validTotal = odds.over_point !== null && odds.over_point !== undefined && odds.over_point !== 0;
+        if (!validML || !validSpread || !validTotal) {
+            console.log(`   🚫 Filtered ${g.away_team} @ ${g.home_team} from analysis — invalid market data (spread: ${odds.home_point}, total: ${odds.over_point}, ML: ${odds.home_odds}/${odds.away_odds})`);
+            return false;
+        }
+        return true;
+    });
+    if (allGames.length < rawGames.length) {
+        console.log(`   📊 ${rawGames.length - allGames.length} games filtered out, ${allGames.length} valid games remaining\n`);
+    } else {
+        console.log('');
+    }
 
     // Load calibration data from recent settled results
     const calibration = await generateCalibrationContext(14);
@@ -312,7 +333,7 @@ async function runFullAnalysis() {
     }
 
     if (allGames.length === 0) {
-        console.log('⚠️ No games found. Run updater.js first to fetch odds.');
+        console.log('⚠️ No valid games found. Run updater.js first to fetch odds.');
         return;
     }
 
@@ -493,24 +514,45 @@ async function runFullAnalysis() {
 // ===== CROSS-SPORT PARLAY BUILDER =====
 async function buildCrossSportParlays(allPicks) {
     const pickSummary = allPicks.map((p, i) =>
-        `${i + 1}. [${p.sport}] ${p.team} ${p.type}${p.picked_line ? ` (line: ${p.picked_line})` : ''} @ ${p.odds > 0 ? '+' : ''}${p.odds} — ${p.confidence}% (${p.tier}) — ${p.game}`
+        `${i + 1}. [${p.sport}] ${p.team} ${p.type}${p.picked_line ? ` (line: ${p.picked_line})` : ''} @ ${p.odds > 0 ? '+' : ''}${p.odds} — ${p.confidence}% (${p.tier}) — game_id: ${p.game_id} — ${p.game}`
     ).join('\n');
 
     const prompt = `You are the Parlay Bot. You have analyzed today's games across multiple sports and identified these picks:
 
 ${pickSummary}
 
-Now build 3 recommended CROSS-SPORT parlays that MIX different sports for variety and value:
+Now build 3 recommended parlays. Follow these rules EXACTLY:
 
-1. "The Safe Bag" (tier: "safe") — Use the 3 highest-confidence picks (75%+ lock tier). Prioritize mixing sports if possible.
-2. "The Value Play" (tier: "value") — Use DIFFERENT picks than Safe Bag, targeting 60-74% confidence (value tier). Must mix at least 2 different sports.
-3. "The Big Swing" (tier: "longshot") — Include at least one longshot pick (under 60%) for higher payout. Mix sports for variety.
+1. "The Safe Bag" (tier: "safe") — HIGHEST CONFIDENCE / FAVORITES ONLY:
+   - MUST use exactly 3 legs
+   - Every leg MUST be from a pick where the team is the MONEYLINE FAVORITE (negative American odds) OR where the spread favors them
+   - Prefer legs where the moneyline odds are between -110 and -400 (strong but not extreme favorites)
+   - Do NOT include any underdog moneyline picks (positive American odds like +100, +150, +235) in The Safe Bag
+   - Sort candidate legs by implied probability from the actual odds (NOT AI confidence alone), and pick the 3 with the highest implied win probability
+   - If fewer than 3 qualifying favorite picks exist, use spread picks on favorites instead
+   - NEVER include a leg with American odds of +100 or higher in The Safe Bag
 
-CRITICAL RULES:
-- Each parlay should have exactly 3 legs
-- NO two parlays should share the same legs
-- Mix different sports whenever possible for variety
-- Use the exact team names and odds from the pick list above
+2. "The Value Play" (tier: "value") — BEST VALUE / EDGE PICKS:
+   - MUST use exactly 3 legs
+   - Should include picks where the AI confidence is notably higher than the implied probability from the odds — this is where the model sees edge the market doesn't
+   - Can include moderate favorites (-110 to -200) and slight underdogs (+100 to +180) where the AI sees value
+   - At least 1 leg should come from a different sport than the other 2 (when multiple sports are available)
+   - No legs shared with The Safe Bag
+
+3. "The Big Swing" (tier: "longshot") — HIGH RISK / HIGH REWARD:
+   - MUST use exactly 3 legs
+   - MUST include at least 1 underdog moneyline pick (+150 or higher)
+   - Should include at least 1 longshot-tier pick (AI confidence below 60%)
+   - Target combined decimal odds of 10x+ (big payout potential)
+   - Can use totals (over/under) picks as legs
+   - No legs shared with The Safe Bag or The Value Play
+
+GLOBAL RULES:
+- Each parlay MUST have exactly 3 legs
+- NO two parlays may share the same leg
+- When multiple sports are available, mix sports across parlays when possible
+- Use the EXACT team names and odds from the pick list above
+- Every leg must include: game_id, team (picked team name), pick_type (one of: moneyline, spread, over, under), picked_line (numeric or null for moneyline), odds (American odds integer), confidence (0-100)
 
 Respond in VALID JSON only:
 {
@@ -519,15 +561,15 @@ Respond in VALID JSON only:
       "tier": "safe",
       "name": "The Safe Bag",
       "legs": [
-        {"picked_team": "Team ML", "pick_type": "moneyline", "picked_line": 0, "odds": -200, "game": "Away @ Home"}
+        {"game_id": "abc123", "team": "Team Name", "pick_type": "moneyline", "picked_line": null, "odds": -200, "confidence": 72, "game": "Away @ Home"}
       ],
-      "rationale": "Why this combination works across sports"
+      "rationale": "Why this combination works"
     }
   ]
 }`;
 
     const model = genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.1-pro-preview',
         generationConfig: {
             temperature: 0.3,
             responseMimeType: 'application/json'
@@ -540,19 +582,26 @@ Respond in VALID JSON only:
 
     let stored = 0;
     for (const parlay of parlays) {
-        const combinedOdds = calculateParlayOdds(parlay.legs);
-        const payoutOn100 = Math.round(combinedOdds * 100 * 100) / 100;
-
-        // Look up confidence for each leg from our picks
-        const legConfs = parlay.legs.map(leg => {
-            const legTeam = (leg.picked_team || '').toLowerCase().replace(/ ml$/i, '');
-            if (!legTeam) return 50;
+        // Normalize leg fields — Gemini may use 'team' or 'picked_team'
+        const normalizedLegs = parlay.legs.map(leg => {
+            const teamName = (leg.team || leg.picked_team || '').replace(/ ml$/i, '');
             const match = allPicks.find(p =>
-                p.team && p.team.toLowerCase() === legTeam
+                p.team && p.team.toLowerCase() === teamName.toLowerCase()
             );
-            return match ? match.confidence : 50;
+            return {
+                game_id: leg.game_id || match?.game_id || null,
+                team: teamName,
+                pick_type: leg.pick_type || match?.type || 'moneyline',
+                picked_line: leg.picked_line != null ? leg.picked_line : (match?.picked_line || null),
+                odds: leg.odds || match?.odds || 0,
+                confidence: leg.confidence || match?.confidence || 50,
+                game: leg.game || match?.game || ''
+            };
         });
-        const avgConfidence = Math.round(legConfs.reduce((s, c) => s + c, 0) / legConfs.length);
+
+        const combinedOdds = calculateParlayOdds(normalizedLegs);
+        const payoutOn100 = Math.round(combinedOdds * 100 * 100) / 100;
+        const avgConfidence = Math.round(normalizedLegs.reduce((s, l) => s + l.confidence, 0) / normalizedLegs.length);
 
         const { error } = await supabase
             .from('recommended_parlays')
@@ -560,7 +609,7 @@ Respond in VALID JSON only:
                 parlay_date: new Date().toISOString().split('T')[0],
                 tier: parlay.tier,
                 name: parlay.name,
-                legs: parlay.legs,
+                legs: normalizedLegs,
                 combined_odds: combinedOdds,
                 payout_on_100: payoutOn100,
                 confidence: avgConfidence,

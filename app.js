@@ -1129,7 +1129,7 @@ function createSlateRow(game, hasPick) {
 
     const spreadLabel = game.spread.value !== 0
         ? `${game.spread.team} ${game.spread.value}`
-        : 'PK';
+        : 'No line';
 
     return `
         <div class="slate-row" data-league="${game.league}" data-id="${game.id}">
@@ -1146,7 +1146,7 @@ function createSlateRow(game, hasPick) {
             <div class="slate-odds">
                 <div class="slate-odds-cell">
                     <span class="slate-odds-label">ML</span>
-                    <span class="slate-odds-val">${formatOdds(game.moneyline.away)} / ${formatOdds(game.moneyline.home)}</span>
+                    <span class="slate-odds-val">${(Math.abs(game.moneyline.away) > 10000 || Math.abs(game.moneyline.home) > 10000) ? 'Off board' : `${formatOdds(game.moneyline.away)} / ${formatOdds(game.moneyline.home)}`}</span>
                 </div>
                 <div class="slate-odds-cell">
                     <span class="slate-odds-label">Spread</span>
@@ -1246,15 +1246,15 @@ function createGameCard(game) {
                 <div class="odds-row">
                     <div class="odds-cell">
                         <div class="odds-cell-label">${spreadLabel}</div>
-                        <div class="odds-cell-value">${game.spread.team} ${game.spread.value}</div>
+                        <div class="odds-cell-value">${game.spread.value === 0 ? 'No line' : `${game.spread.team} ${game.spread.value}`}</div>
                     </div>
                     <div class="odds-cell">
                         <div class="odds-cell-label">${ouLabel}</div>
-                        <div class="odds-cell-value">${game.overUnder.total}</div>
+                        <div class="odds-cell-value">${!game.overUnder.total ? 'No line' : game.overUnder.total}</div>
                     </div>
                     <div class="odds-cell">
                         <div class="odds-cell-label">ML Fav</div>
-                        <div class="odds-cell-value">${formatOdds(Math.min(game.moneyline.away, game.moneyline.home))}</div>
+                        <div class="odds-cell-value">${(Math.abs(game.moneyline.away) > 10000 || Math.abs(game.moneyline.home) > 10000) ? 'Off board' : formatOdds(Math.min(game.moneyline.away, game.moneyline.home))}</div>
                     </div>
                 </div>
             </div>
@@ -1273,6 +1273,8 @@ function createGameCard(game) {
             <!-- PICK BUTTONS: ML / SPREAD / O-U -->
             <div class="pick-section-group">
                 <div class="pick-row-label">Moneyline</div>
+                ${(Math.abs(game.moneyline.away) > 10000 || Math.abs(game.moneyline.home) > 10000) ? `
+                <div class="pick-row"><div class="pick-btn" style="flex:1;cursor:default;opacity:0.5;"><div class="pick-btn-team">Off the Board</div></div></div>` : `
                 <div class="pick-row">
                     <button class="pick-btn ${awayMLSel ? 'selected' : ''}" 
                             onclick="togglePick('${game.id}', 'awayML', '${game.away.abbr} ML', ${game.moneyline.away}, ${game.confidence.awayML})">
@@ -1286,9 +1288,11 @@ function createGameCard(game) {
                         <div class="pick-btn-odds">${formatOdds(game.moneyline.home)}</div>
                         <div class="pick-conf ${getConfidenceClass(game.confidence.homeML)}">${getConfidenceLabel(game.confidence.homeML)} ${game.confidence.homeML}%</div>
                     </button>
-                </div>
+                </div>`}
                 
                 <div class="pick-row-label">${spreadLabel}</div>
+                ${game.spread.value === 0 ? `
+                <div class="pick-row"><div class="pick-btn" style="flex:1;cursor:default;opacity:0.5;"><div class="pick-btn-team">No Line Posted</div></div></div>` : `
                 <div class="pick-row">
                     <button class="pick-btn ${spreadFavSel ? 'selected' : ''}" 
                             onclick="togglePick('${game.id}', 'spreadFav', '${favTeam} ${game.spread.value}', ${game.spread.odds}, ${favSpreadConf})">
@@ -1302,9 +1306,11 @@ function createGameCard(game) {
                         <div class="pick-btn-odds">-110</div>
                         <div class="pick-conf ${getConfidenceClass(dogSpreadConf)}">${getConfidenceLabel(dogSpreadConf)} ${dogSpreadConf}%</div>
                     </button>
-                </div>
+                </div>`}
                 
                 <div class="pick-row-label">Total ${isNHL || isSoccer ? 'Goals' : 'Points'}</div>
+                ${!game.overUnder.total ? `
+                <div class="pick-row"><div class="pick-btn" style="flex:1;cursor:default;opacity:0.5;"><div class="pick-btn-team">No Line Posted</div></div></div>` : `
                 <div class="pick-row">
                     <button class="pick-btn ${overSel ? 'selected' : ''}" 
                             onclick="togglePick('${game.id}', 'over', 'O${game.overUnder.total}', ${game.overUnder.overOdds}, ${game.confidence.over})">
@@ -1318,7 +1324,7 @@ function createGameCard(game) {
                         <div class="pick-btn-odds">${game.overUnder.total} (${formatOdds(game.overUnder.underOdds)})</div>
                         <div class="pick-conf ${getConfidenceClass(game.confidence.under)}">${getConfidenceLabel(game.confidence.under)} ${game.confidence.under}%</div>
                     </button>
-                </div>
+                </div>`}
             </div>
         </div>
     `;
