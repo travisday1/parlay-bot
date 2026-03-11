@@ -615,11 +615,12 @@ Respond in VALID JSON only:
             if (hasUnderdog) {
                 console.log(`   ⚠️ WARNING: Gemini hallucinated an underdog in The Safe Bag. Overriding programmatically...`);
                 const safeFavorites = allPicks
-                    .filter(p => p.type === 'moneyline' && p.odds < 0)
+                    .filter(p => p.odds < 0)
                     .sort((a, b) => a.odds - b.odds); // most negative first
 
-                if (safeFavorites.length >= 3) {
-                    finalLegs = safeFavorites.slice(0, 3).map(match => ({
+                if (safeFavorites.length > 0) {
+                    const legsCount = Math.min(3, safeFavorites.length);
+                    finalLegs = safeFavorites.slice(0, legsCount).map(match => ({
                         game_id: match.game_id,
                         team: match.team,
                         picked_team: match.team,
@@ -630,7 +631,7 @@ Respond in VALID JSON only:
                         game: match.game
                     }));
                 } else {
-                    console.log(`   ⚠️ Could not override Safe Bag: not enough heavy favorites available.`);
+                    console.log(`   ⚠️ Could not override Safe Bag: no negative odds favorites available.`);
                 }
             }
         }
