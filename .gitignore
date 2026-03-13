@@ -1,3 +1,6 @@
 node_modules/
 .env
 logs/
+temp_*.json
+check-db.js
+firebase-debug.log

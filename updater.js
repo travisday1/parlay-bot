@@ -109,10 +109,16 @@ function parseOdds(game, sportTitle) {
 }
 
 // Validate odds data — reject games with incomplete or extreme market data
-function isValidOddsData(odds) {
+// Soccer is relaxed: only requires valid moneyline (spreads/totals often unavailable)
+function isValidOddsData(odds, sportKey = '') {
     const validML = odds.home_odds && odds.away_odds
         && Math.abs(odds.home_odds) <= 10000
         && Math.abs(odds.away_odds) <= 10000;
+
+    // Soccer only needs moneyline
+    if (sportKey.startsWith('soccer_')) {
+        return validML;
+    }
 
     const validSpread = odds.home_point !== null
         && odds.home_point !== undefined;
@@ -160,7 +166,7 @@ async function updateAllSports() {
 
                 if (oddsRecord) {
                     // Validate odds data — skip games with incomplete or extreme market data
-                    if (isValidOddsData(oddsRecord)) {
+                    if (isValidOddsData(oddsRecord, sport.key)) {
                         allOdds.push(oddsRecord);
                     } else {
                         skippedOdds++;

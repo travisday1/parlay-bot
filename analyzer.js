@@ -311,12 +311,23 @@ async function runFullAnalysis() {
     console.log(`\n📦 Found ${rawGames.length} games in the database for today.`);
 
     // Filter out games with invalid/incomplete market data
+    // Soccer is relaxed: only requires valid moneyline
     const allGames = rawGames.filter(g => {
         const odds = g.odds?.[0];
         if (!odds) return false;
         const validML = odds.home_odds && odds.away_odds
             && Math.abs(odds.home_odds) <= 10000
             && Math.abs(odds.away_odds) <= 10000;
+
+        // Soccer only needs moneyline
+        if (g.sport_key?.startsWith('soccer_')) {
+            if (!validML) {
+                console.log(`   🚫 Filtered ${g.away_team} @ ${g.home_team} — invalid moneyline (ML: ${odds.home_odds}/${odds.away_odds})`);
+                return false;
+            }
+            return true;
+        }
+
         const validSpread = odds.home_point !== null && odds.home_point !== undefined;
         const validTotal = odds.over_point !== null && odds.over_point !== undefined && odds.over_point !== 0;
         if (!validML || !validSpread || !validTotal) {
