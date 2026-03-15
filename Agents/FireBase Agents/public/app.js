@@ -1841,7 +1841,7 @@ async function loadPerformanceData(startDate, endDate) {
         const results = result.data || [];
         // Filter to date range
         return results.filter(r => {
-            const pickDate = r.pick_date || r.daily_picks?.pick_date;
+            const pickDate = r.pick_date;
             return pickDate >= startDate && pickDate <= endDate;
         });
     } catch (e) {
@@ -1857,8 +1857,7 @@ async function loadPerformanceFallback(startDate, endDate) {
 
 function calculateTierStats(results, tier) {
     const tierResults = results.filter(r => {
-        const pickTier = r.daily_picks?.tier;
-        return pickTier === tier;
+        return r.tier === tier;
     });
 
     if (tierResults.length === 0) {
@@ -1881,7 +1880,7 @@ function calculateTierStats(results, tier) {
             pushes++;
             totalPayout += 100; // stake returned
         }
-        const conf = parseFloat(r.daily_picks?.confidence);
+        const conf = parseFloat(r.confidence);
         if (!isNaN(conf)) {
             totalConfidence += conf;
             confCount++;
@@ -2134,7 +2133,7 @@ async function calculateBreakdownStats(results) {
 
     // Collect game_ids to look up sport_key
     const gameIds = [...new Set(
-        results.map(r => r.daily_picks?.game_id || r.game_id).filter(Boolean)
+        results.map(r => r.game_id).filter(Boolean)
     )];
 
     // Look up sport keys from games table
@@ -2142,15 +2141,15 @@ async function calculateBreakdownStats(results) {
     if (gameIds.length > 0) {
         // Sport key is already in the results from the API — build map from existing data
         for (const r of results) {
-            const gameId = r.daily_picks?.game_id || r.game_id;
-            const sportKey = r.sport_key || r.daily_picks?.sport_key || 'unknown';
+            const gameId = r.game_id;
+            const sportKey = r.sport_key || 'unknown';
             if (gameId) gameMap[gameId] = sportKey;
         }
     }
 
     for (const r of results) {
-        const pickType = (r.daily_picks?.pick_type || 'unknown').toLowerCase();
-        const gameId = r.daily_picks?.game_id || r.game_id;
+        const pickType = (r.pick_type || 'unknown').toLowerCase();
+        const gameId = r.game_id;
         const sportKey = gameMap[gameId] || 'unknown';
         const result = r.result;
         const payout = parseFloat(r.payout_on_100) || 0;
