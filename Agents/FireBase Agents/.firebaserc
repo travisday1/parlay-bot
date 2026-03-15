@@ -1,10 +1,12 @@
 {
-  "projects": {},
+  "projects": {
+    "default": "parlay-bot-1772763394"
+  },
   "targets": {
     "parlay-bot-1772763394": {
       "hosting": {
         "parlay-bot": [
-          "parlay-bot-1772763394"
+          "ai-picks-analyzer"
         ]
       }
     }
