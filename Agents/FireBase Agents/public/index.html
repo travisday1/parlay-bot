@@ -346,6 +346,13 @@
                             </h3>
                         </div>
                         <div id="perf-breakdown-content" class="perf-breakdown-body collapsed">
+                            <!-- Breakdown Tier Filter -->
+                            <div class="breakdown-tier-filter">
+                                <button class="breakdown-tier-btn active" data-tier="all" onclick="setBreakdownTier('all')">All Tiers</button>
+                                <button class="breakdown-tier-btn" data-tier="lock" onclick="setBreakdownTier('lock')">🔒 Locks</button>
+                                <button class="breakdown-tier-btn" data-tier="value" onclick="setBreakdownTier('value')">⚡ Value</button>
+                                <button class="breakdown-tier-btn" data-tier="longshot" onclick="setBreakdownTier('longshot')">🎲 Big Swings</button>
+                            </div>
                             <!-- Bet Type Table -->
                             <h4 class="perf-sub-heading">By Bet Type</h4>
                             <div class="perf-stats-table-wrapper">

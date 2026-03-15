@@ -2098,7 +2098,8 @@ async function refreshPerformance(startDate, endDate) {
         renderPerformanceTable(lockStats, valueStats, longshotStats);
 
         // Calculate and render bet type & sport breakdowns
-        const { betTypeStats, sportStats } = await calculateBreakdownStats(results);
+        _cachedBreakdownResults = results;
+        const { betTypeStats, sportStats } = await calculateBreakdownStats(results, currentBreakdownTier);
         renderBreakdownTables(betTypeStats, sportStats);
 
         console.log(`📈 Individual performance loaded: ${results.length} settled picks in range`);
@@ -2127,27 +2128,32 @@ const BET_TYPE_LABELS = {
     under: '⬇️ Under',
 };
 
-async function calculateBreakdownStats(results) {
+async function calculateBreakdownStats(results, tierFilter = 'all') {
+    // Filter by tier if specified
+    const filtered = tierFilter === 'all'
+        ? results
+        : results.filter(r => r.tier === tierFilter);
+
     const betTypeStats = {};
     const sportStats = {};
 
     // Collect game_ids to look up sport_key
     const gameIds = [...new Set(
-        results.map(r => r.game_id).filter(Boolean)
+        filtered.map(r => r.game_id).filter(Boolean)
     )];
 
     // Look up sport keys from games table
     let gameMap = {};
     if (gameIds.length > 0) {
         // Sport key is already in the results from the API — build map from existing data
-        for (const r of results) {
+        for (const r of filtered) {
             const gameId = r.game_id;
             const sportKey = r.sport_key || 'unknown';
             if (gameId) gameMap[gameId] = sportKey;
         }
     }
 
-    for (const r of results) {
+    for (const r of filtered) {
         const pickType = (r.pick_type || 'unknown').toLowerCase();
         const gameId = r.game_id;
         const sportKey = gameMap[gameId] || 'unknown';
@@ -2396,6 +2402,8 @@ function updateSidebarTierCounts() {
 // ===== PERFORMANCE TIER & VIEW TOGGLES =====
 let currentPerfTier = 'all';
 let currentPerfView = 'individual';
+let currentBreakdownTier = 'all';
+let _cachedBreakdownResults = [];
 
 function setPerfTier(tier) {
     currentPerfTier = tier;
@@ -2428,6 +2436,18 @@ function setPerfTier(tier) {
                 row.style.display = tierMap[i] === tier ? '' : 'none';
             }
         });
+    }
+}
+
+async function setBreakdownTier(tier) {
+    currentBreakdownTier = tier;
+    document.querySelectorAll('.breakdown-tier-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tier === tier);
+    });
+    // Re-calculate and render breakdown with filtered results
+    if (_cachedBreakdownResults.length > 0) {
+        const { betTypeStats, sportStats } = await calculateBreakdownStats(_cachedBreakdownResults, tier);
+        renderBreakdownTables(betTypeStats, sportStats);
     }
 }
 

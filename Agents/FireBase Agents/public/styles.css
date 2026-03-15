@@ -2338,6 +2338,59 @@ body.sidebar-open #app-wrapper {
     color: #fbbf24;
 }
 
+/* Breakdown Tier Filter */
+.breakdown-tier-filter {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.breakdown-tier-btn {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.breakdown-tier-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+}
+
+.breakdown-tier-btn.active {
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+}
+
+.breakdown-tier-btn[data-tier="all"].active {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+}
+
+.breakdown-tier-btn[data-tier="lock"].active {
+    background: linear-gradient(135deg, var(--accent-green), #16a34a);
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.25);
+}
+
+.breakdown-tier-btn[data-tier="value"].active {
+    background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+}
+
+.breakdown-tier-btn[data-tier="longshot"].active {
+    background: linear-gradient(135deg, var(--accent-purple), #7c3aed);
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.25);
+}
+
 /* ===== RECOMMENDED PARLAY ADD BUTTON ===== */
 .rec-add-parlay-btn {
     width: 100%;
