@@ -73,7 +73,7 @@ const SPORT_CONFIG = {
     },
     // Soccer — generic config shared across all leagues
     // Lower home advantage than US sports, no Four Factors (basketball-specific)
-    // Uses generic stats from Supabase history (no BallDontLie for soccer)
+    // Uses generic stats from Cloud SQL history (no BallDontLie for soccer)
     'soccer_usa_mls': {
         homeAdvantage: 0.025,
         fourFactorsWeight: 0.00,
@@ -776,7 +776,7 @@ async function generateGameProbabilities(game) {
         awayStats = await getNHLTeamStats(awayTeam, nhlSeasonYear);
     }
 
-    // Fallback to generic stats from Supabase history for any sport
+    // Fallback to generic stats from Cloud SQL history for any sport
     if (!homeStats) homeStats = await getGenericTeamStats(homeTeam, sportKey);
     if (!awayStats) awayStats = await getGenericTeamStats(awayTeam, sportKey);
 

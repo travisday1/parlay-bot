@@ -328,7 +328,7 @@ async function runFullAnalysis() {
     console.log(`📅 ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`);
     console.log('='.repeat(60));
 
-    // Fetch all today's games from Supabase
+    // Fetch all today's games from Cloud SQL
     const rawGames = await fetchTodaysGames();
     console.log(`\n📦 Found ${rawGames.length} games in the database for today.`);
 
