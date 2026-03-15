@@ -1,0 +1,28 @@
+{
+  "name": "parlay-bot-firebase",
+  "version": "2.0.0",
+  "description": "Parlay Bot — AI-powered sports betting analysis (Firebase edition)",
+  "main": "daily-pipeline.js",
+  "scripts": {
+    "pipeline": "node daily-pipeline.js",
+    "pipeline:force": "node daily-pipeline.js --force",
+    "update": "node updater.js",
+    "analyze": "node analyzer.js",
+    "settle": "node settler.js",
+    "post:morning": "node poster.js --morning",
+    "post:evening": "node poster.js --evening",
+    "deploy": "firebase deploy",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:dataconnect": "firebase deploy --only dataconnect",
+    "emulators": "firebase emulators:start"
+  },
+  "dependencies": {
+    "@balldontlie/sdk": "^1.1.0",
+    "@google/generative-ai": "^0.24.0",
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

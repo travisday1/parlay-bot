@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parlay Bot | AI-Powered Betting Research</title>
+    <meta name="description"
+        content="AI-powered parlay betting assistant with game analysis, odds, and recommended parlay combinations.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <!-- AUTH GATE -->
+    <div id="auth-gate" class="password-gate">
+        <div class="pw-card" style="max-width: 420px;">
+            <div class="pw-icon">🎯</div>
+            <h1 class="pw-title">PARLAY BOT</h1>
+            <p class="pw-subtitle">AI-Powered Betting Research</p>
+
+            <!-- Social Login Buttons -->
+            <div id="social-logins" style="display: flex; flex-direction: column; gap: 8px; margin: 16px 0;">
+                <button class="social-btn google-btn" onclick="signInWithProvider('google')">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"
+                        style="width: 20px; height: 20px;">
+                    Continue with Google
+                </button>
+                <button class="social-btn apple-btn" onclick="signInWithProvider('apple')">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path
+                            d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                    </svg>
+                    Continue with Apple
+                </button>
+                <button class="social-btn facebook-btn" onclick="signInWithProvider('facebook')">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="#1877F2">
+                        <path
+                            d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                    </svg>
+                    Continue with Facebook
+                </button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 12px; margin: 16px 0;">
+                <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                <span style="color: rgba(255,255,255,0.4); font-size: 0.8rem;">or</span>
+                <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+            </div>
+
+            <!-- Email Auth Form -->
+            <div id="auth-form">
+                <div class="pw-input-group" style="flex-direction: column; gap: 8px;">
+                    <input type="email" id="auth-email" class="pw-input" placeholder="Email address"
+                        autocomplete="email">
+                    <input type="password" id="auth-password" class="pw-input" placeholder="Password"
+                        autocomplete="current-password" onkeydown="if(event.key==='Enter')handleEmailAuth()">
+                    <div id="auth-name-field" style="display: none;">
+                        <input type="text" id="auth-name" class="pw-input" placeholder="Display name (optional)"
+                            style="width:100%;">
+                    </div>
+                    <button class="pw-btn" onclick="handleEmailAuth()" id="auth-submit-btn" style="width:100%;">Sign
+                        In</button>
+                </div>
+            </div>
+
+            <p id="auth-error" class="pw-error" style="display:none;"></p>
+
+            <div style="margin-top: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.5);">
+                <a href="#" onclick="toggleAuthMode(); return false;" id="auth-toggle-link"
+                    style="color: #4fc3f7;">Don't have an account? Sign up</a>
+                <span style="margin: 0 8px;">·</span>
+                <a href="#" onclick="sendPasswordReset(); return false;" style="color: #4fc3f7;">Forgot password?</a>
+            </div>
+
+            <p style="margin-top: 16px; font-size: 0.7rem; color: rgba(255,255,255,0.3); line-height: 1.4;">
+                By signing up you agree to our <a href="/terms" style="color: rgba(255,255,255,0.5);">Terms of
+                    Service</a> and <a href="/privacy" style="color: rgba(255,255,255,0.5);">Privacy Policy</a>.
+                Must be 21+ to use this service. Parlay Bot provides sports analysis for entertainment and informational
+                purposes only.
+                <a href="https://www.ncpgambling.org" target="_blank" style="color: rgba(255,255,255,0.5);">Gambling
+                    Problem? Call 1-800-GAMBLER.</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- APP (hidden until auth) -->
+    <div id="app-wrapper" style="display:none;">
+        <!-- Header -->
+        <header id="main-header">
+            <div class="header-content">
+                <div class="brand">
+                    <div class="brand-icon">🎯</div>
+                    <div>
+                        <h1 class="brand-title">PARLAY BOT</h1>
+                        <p class="brand-subtitle">AI-Powered Betting Research</p>
+                    </div>
+                </div>
+                <div class="header-meta">
+                    <div id="user-menu" class="user-menu"></div>
+                    <div class="date-badge">
+                        <span class="date-icon">📅</span>
+                        <span id="header-date">Loading...</span>
+                    </div>
+                    <div class="last-updated">
+                        <span class="update-icon">🔄</span>
+                        <span>Last Updated: <strong id="last-updated-time">Loading...</strong></span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Sticky Nav Bar -->
+        <nav id="sticky-nav" class="sticky-nav">
+            <div class="nav-links">
+                <a href="#performance-section" class="nav-link active"
+                    onclick="smoothNav(event, 'performance-section')">📈 Performance</a>
+                <a href="#recommended-section" class="nav-link" onclick="smoothNav(event, 'recommended-section')">🔥
+                    Parlays</a>
+                <a href="#picks-section" class="nav-link" onclick="smoothNav(event, 'picks-section')">🤖 Picks</a>
+                <a href="#slate-section" class="nav-link" onclick="smoothNav(event, 'slate-section')">📊 Full Slate</a>
+            </div>
+            <button class="nav-parlay-btn" id="nav-parlay-btn" onclick="toggleSidebar()">
+                🎰 My Parlay <span id="nav-leg-badge" class="nav-badge" style="display:none;">0</span>
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main id="app">
+
+            <!-- Performance Tracker (Top Section) -->
+            <section id="performance-section" class="section">
+                <div class="section-header perf-collapse-header" onclick="togglePerfTracker()">
+                    <div>
+                        <h2 class="section-title">📈 Performance Tracker <span id="perf-collapse-icon"
+                                class="perf-toggle-badge">+ Expand</span></h2>
+                        <p class="section-desc">Historical $100-per-bet results — see how the bot performs over time</p>
+                    </div>
+                </div>
+                <div id="perf-tracker-content" class="perf-content collapsed">
+                    <!-- Timeframe Range -->
+                    <div class="perf-range-bar">
+                        <button class="perf-range-btn active" data-range="7" onclick="setPerformanceRange(7)">Last 7
+                            Days</button>
+                        <button class="perf-range-btn" data-range="30" onclick="setPerformanceRange(30)">Last 30
+                            Days</button>
+                        <button class="perf-range-btn" data-range="90" onclick="setPerformanceRange(90)">Last 90
+                            Days</button>
+                        <button class="perf-range-btn" data-range="custom" onclick="showCustomRange()">Custom</button>
+                        <div id="custom-range-inputs" class="custom-range-inputs" style="display:none;">
+                            <input type="date" id="perf-start-date" class="date-input">
+                            <span class="date-sep">to</span>
+                            <input type="date" id="perf-end-date" class="date-input">
+                            <button class="perf-go-btn" onclick="applyCustomRange()">Go</button>
+                        </div>
+                    </div>
+                    <!-- Tier Filter -->
+                    <div class="perf-tier-filter">
+                        <button class="perf-tier-btn active" data-tier="all" onclick="setPerfTier('all')">All
+                            Tiers</button>
+                        <button class="perf-tier-btn" data-tier="lock" onclick="setPerfTier('lock')">🔒 Locks</button>
+                        <button class="perf-tier-btn" data-tier="value" onclick="setPerfTier('value')">⚡ Value
+                            Plays</button>
+                        <button class="perf-tier-btn" data-tier="longshot" onclick="setPerfTier('longshot')">🎲 Big
+                            Swings</button>
+                    </div>
+                    <!-- View Toggle -->
+                    <div class="perf-view-toggle">
+                        <button class="perf-view-btn active" data-view="individual"
+                            onclick="setPerfView('individual')">By
+                            Individual Game</button>
+                        <button class="perf-view-btn" data-view="parlay" onclick="setPerfView('parlay')">By
+                            Parlay</button>
+                    </div>
+                    <!-- Performance Stats Table -->
+                    <div class="perf-stats-table-wrapper">
+                        <table class="perf-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>Tier</th>
+                                    <th># of Wagers</th>
+                                    <th>Total Wagered</th>
+                                    <th>Total Payout</th>
+                                    <th>Profit / Loss</th>
+                                    <th>Win %</th>
+                                    <th>Avg Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody id="perf-table-body">
+                                <tr>
+                                    <td>🔒 Locks</td>
+                                    <td id="perf-lock-wagers">—</td>
+                                    <td id="perf-lock-wagered">—</td>
+                                    <td id="perf-lock-payout">—</td>
+                                    <td id="perf-lock-profit" class="perf-profit">—</td>
+                                    <td id="perf-lock-winrate">—</td>
+                                    <td id="perf-lock-confidence">—</td>
+                                </tr>
+                                <tr>
+                                    <td>⚡ Value Plays</td>
+                                    <td id="perf-value-wagers">—</td>
+                                    <td id="perf-value-wagered">—</td>
+                                    <td id="perf-value-payout">—</td>
+                                    <td id="perf-value-profit" class="perf-profit">—</td>
+                                    <td id="perf-value-winrate">—</td>
+                                    <td id="perf-value-confidence">—</td>
+                                </tr>
+                                <tr>
+                                    <td>🎲 Big Swings</td>
+                                    <td id="perf-longshot-wagers">—</td>
+                                    <td id="perf-longshot-wagered">—</td>
+                                    <td id="perf-longshot-payout">—</td>
+                                    <td id="perf-longshot-profit" class="perf-profit">—</td>
+                                    <td id="perf-longshot-winrate">—</td>
+                                    <td id="perf-longshot-confidence">—</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr class="perf-totals-row">
+                                    <td><strong>Totals</strong></td>
+                                    <td id="perf-total-wagers"><strong>—</strong></td>
+                                    <td id="perf-total-wagered"><strong>—</strong></td>
+                                    <td id="perf-total-payout"><strong>—</strong></td>
+                                    <td id="perf-total-profit" class="perf-profit"><strong>—</strong></td>
+                                    <td id="perf-total-winrate"><strong>—</strong></td>
+                                    <td id="perf-total-confidence"><strong>—</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <!-- Old perf cards (simplified) -->
+                    <div class="perf-cards-grid">
+                        <div class="perf-card perf-card-lock">
+                            <div class="perf-card-header">
+                                <span class="perf-card-icon">🔒</span>
+                                <h3>Locks</h3>
+                                <span class="perf-card-tag tag-lock">75%+ Confidence</span>
+                            </div>
+                            <div class="perf-card-body">
+                                <div class="perf-stat-row">
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">Record</span>
+                                        <span id="lock-record" class="perf-stat-value">—</span>
+                                    </div>
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">Win Rate</span>
+                                        <span id="lock-winrate" class="perf-stat-value">—</span>
+                                    </div>
+                                </div>
+                                <div class="perf-stat-row">
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">$100/Bet Profit</span>
+                                        <span id="lock-profit" class="perf-stat-value perf-profit">—</span>
+                                    </div>
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">ROI</span>
+                                        <span id="lock-roi" class="perf-stat-value">—</span>
+                                    </div>
+                                </div>
+                                <div class="perf-bar-container">
+                                    <div id="lock-bar" class="perf-bar" style="width:0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="perf-card perf-card-value">
+                            <div class="perf-card-header">
+                                <span class="perf-card-icon">💎</span>
+                                <h3>Value Plays</h3>
+                                <span class="perf-card-tag tag-value">60-74% Confidence</span>
+                            </div>
+                            <div class="perf-card-body">
+                                <div class="perf-stat-row">
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">Record</span>
+                                        <span id="value-record" class="perf-stat-value">—</span>
+                                    </div>
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">Win Rate</span>
+                                        <span id="value-winrate" class="perf-stat-value">—</span>
+                                    </div>
+                                </div>
+                                <div class="perf-stat-row">
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">$100/Bet Profit</span>
+                                        <span id="value-profit" class="perf-stat-value perf-profit">—</span>
+                                    </div>
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">ROI</span>
+                                        <span id="value-roi" class="perf-stat-value">—</span>
+                                    </div>
+                                </div>
+                                <div class="perf-bar-container">
+                                    <div id="value-bar" class="perf-bar" style="width:0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="perf-card perf-card-longshot">
+                            <div class="perf-card-header">
+                                <span class="perf-card-icon">🚀</span>
+                                <h3>Big Swings</h3>
+                                <span class="perf-card-tag tag-longshot">Under 60% Confidence</span>
+                            </div>
+                            <div class="perf-card-body">
+                                <div class="perf-stat-row">
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">Record</span>
+                                        <span id="longshot-record" class="perf-stat-value">—</span>
+                                    </div>
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">Win Rate</span>
+                                        <span id="longshot-winrate" class="perf-stat-value">—</span>
+                                    </div>
+                                </div>
+                                <div class="perf-stat-row">
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">$100/Bet Profit</span>
+                                        <span id="longshot-profit" class="perf-stat-value perf-profit">—</span>
+                                    </div>
+                                    <div class="perf-stat">
+                                        <span class="perf-stat-label">ROI</span>
+                                        <span id="longshot-roi" class="perf-stat-value">—</span>
+                                    </div>
+                                </div>
+                                <div class="perf-bar-container">
+                                    <div id="longshot-bar" class="perf-bar" style="width:0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Performance by Bet Type & Sport (collapsed by default) -->
+                    <div class="perf-breakdown-section">
+                        <div class="perf-breakdown-header" onclick="toggleBreakdownSection()">
+                            <h3 class="perf-breakdown-title">📊 Performance by Bet Type & Sport
+                                <span id="breakdown-toggle-icon" class="perf-toggle-badge">+ Expand</span>
+                            </h3>
+                        </div>
+                        <div id="perf-breakdown-content" class="perf-breakdown-body collapsed">
+                            <!-- Bet Type Table -->
+                            <h4 class="perf-sub-heading">By Bet Type</h4>
+                            <div class="perf-stats-table-wrapper">
+                                <table class="perf-stats-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Bet Type</th>
+                                            <th>Record</th>
+                                            <th>Win %</th>
+                                            <th>P&L ($100 units)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="perf-bettype-body">
+                                        <tr>
+                                            <td colspan="4" style="text-align:center;opacity:0.5;">No data yet</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Sport Table -->
+                            <h4 class="perf-sub-heading" style="margin-top:16px;">By Sport</h4>
+                            <div class="perf-stats-table-wrapper">
+                                <table class="perf-stats-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Sport</th>
+                                            <th>Record</th>
+                                            <th>Win %</th>
+                                            <th>P&L ($100 units)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="perf-sport-body">
+                                        <tr>
+                                            <td colspan="4" style="text-align:center;opacity:0.5;">No data yet</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p id="perf-empty" class="perf-empty" style="display:none;">No settled picks yet. Check back after
+                        games
+                        are completed!</p>
+                </div><!-- end perf-tracker-content -->
+            </section>
+
+            <!-- Recommended Parlays -->
+            <section id="recommended-section" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">🔥 Recommended Parlays</h2>
+                    <p class="section-desc">AI-analyzed combinations ranked by confidence &amp; value</p>
+                </div>
+                <div id="recommended-parlays" class="recommended-grid"></div>
+            </section>
+
+            <!-- Today's Picks (Primary Section) -->
+            <section id="picks-section" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">🤖 Today's Picks</h2>
+                    <p class="section-desc">AI-analyzed games with edge — click picks to add to your parlay</p>
+                </div>
+                <!-- Confidence Filter (with counters) -->
+                <div class="confidence-filter-bar" id="confidence-filter-bar">
+                    <button class="conf-filter-btn active" data-filter="all" onclick="toggleConfFilter('all')">All Picks
+                        <span id="conf-count-all" class="filter-count"></span></button>
+                    <button class="conf-filter-btn" data-filter="lock" onclick="toggleConfFilter('lock')">🔒 Locks <span
+                            id="conf-count-lock" class="filter-count"></span></button>
+                    <button class="conf-filter-btn" data-filter="lean" onclick="toggleConfFilter('lean')">✅ Leans <span
+                            id="conf-count-lean" class="filter-count"></span></button>
+                    <button class="conf-filter-btn" data-filter="tossup" onclick="toggleConfFilter('tossup')">⚠️
+                        Toss-Ups <span id="conf-count-tossup" class="filter-count"></span></button>
+                </div>
+                <!-- League Filter (applies to both sections) -->
+                <div class="filter-bar" id="filter-bar"></div>
+                <!-- Picks Grid -->
+                <div id="picks-grid" class="games-grid">
+                    <div class="loading-state" id="loading-spinner">
+                        <div class="spinner"></div>
+                        <p>Loading live data...</p>
+                    </div>
+                </div>
+                <p id="no-picks-msg" class="perf-empty" style="display:none;">No picks for today yet. Check back after
+                    the pipeline runs!</p>
+            </section>
+
+            <!-- Today's Full Slate (Secondary Section) -->
+            <section id="slate-section" class="section slate-section">
+                <div class="section-header">
+                    <h2 class="section-title">📋 Today's Full Slate</h2>
+                    <p class="section-desc">All games with live odds — no bot recommendation</p>
+                </div>
+                <div id="slate-grid" class="slate-grid"></div>
+            </section>
+        </main>
+
+
+
+
+        <!-- Footer -->
+        <footer>
+            <p>⚠️ For entertainment purposes only. Please gamble responsibly. Past performance does not guarantee future
+                results.</p>
+        </footer>
+    </div>
+
+    <!-- Parlay Sidebar (outside app-wrapper for fixed positioning) -->
+    <aside id="parlay-sidebar" class="parlay-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <span>🎰</span>
+                <h2>My Parlay</h2>
+                <span id="sidebar-leg-count" class="leg-count">0 legs</span>
+            </div>
+            <button class="sidebar-close-btn" onclick="toggleSidebar()">✕</button>
+        </div>
+        <div id="sidebar-picks" class="sidebar-picks">
+            <p class="empty-slip">Click picks on game cards to build your parlay</p>
+        </div>
+        <div class="sidebar-tier-summary" id="sidebar-tier-summary">
+            <span class="tier-chip tier-lock">🔒 <span id="sidebar-lock-count">0</span></span>
+            <span class="tier-chip tier-lean">✅ <span id="sidebar-lean-count">0</span></span>
+            <span class="tier-chip tier-tossup">⚠️ <span id="sidebar-tossup-count">0</span></span>
+        </div>
+        <div class="sidebar-stats">
+            <div class="sidebar-stat">
+                <span class="stat-label">Combined Odds</span>
+                <span id="sidebar-combined-odds" class="stat-value">—</span>
+            </div>
+            <div class="sidebar-stat">
+                <span class="stat-label">$100 Payout</span>
+                <span id="sidebar-payout" class="stat-value payout-value">—</span>
+            </div>
+            <div class="sidebar-stat">
+                <span class="stat-label">Confidence</span>
+                <span id="sidebar-confidence" class="stat-value">—</span>
+            </div>
+            <div class="sidebar-conf-bar">
+                <div id="sidebar-conf-fill" class="conf-bar-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="sidebar-mixer">
+            <h3>🎯 Quick Build</h3>
+            <div class="mixer-controls">
+                <div class="mixer-input">
+                    <label>🔒</label>
+                    <input type="number" id="mixer-locks" min="0" max="10" value="2" oninput="updateBuilderTotal()">
+                </div>
+                <div class="mixer-input">
+                    <label>✅</label>
+                    <input type="number" id="mixer-leans" min="0" max="10" value="1" oninput="updateBuilderTotal()">
+                </div>
+                <div class="mixer-input">
+                    <label>⚠️</label>
+                    <input type="number" id="mixer-tossups" min="0" max="10" value="0" oninput="updateBuilderTotal()">
+                </div>
+                <button class="mixer-gen-btn" id="mixer-gen-btn" onclick="generateMixedParlay()">Generate</button>
+            </div>
+            <div id="mixer-suggestion-area"></div>
+        </div>
+        <div class="sidebar-actions">
+            <button class="sidebar-save-btn" onclick="saveParlay()">💾 Save Parlay</button>
+            <button class="sidebar-clear-btn" onclick="clearParlay()">🗑️ Clear All</button>
+        </div>
+    </aside>
+
+    <!-- Firebase Auth SDK (compat mode for vanilla JS) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script>
+        // Firebase configuration — replace with actual values from Firebase Console
+        const firebaseConfig = {
+            apiKey: "AIzaSyBJMgsgnj586itVKSe3CDhKO9HQ2sUiaxI",
+            authDomain: "parlay-bot-1772763394.firebaseapp.com",
+            projectId: "parlay-bot-1772763394",
+            storageBucket: "parlay-bot-1772763394.firebasestorage.app",
+            messagingSenderId: "692772639163",
+            appId: "1:692772639163:web:e100e162fb2a5f3884b49e"
+        };
+        firebase.initializeApp(firebaseConfig);
+    </script>
+    <script src="app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parlay Bot — Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBJMgsgnj586itVKSe3CDhKO9HQ2sUiaxI",
+            authDomain: "parlay-bot-1772763394.firebaseapp.com",
+            projectId: "parlay-bot-1772763394",
+            storageBucket: "parlay-bot-1772763394.firebasestorage.app",
+            messagingSenderId: "692772639163",
+            appId: "1:692772639163:web:e100e162fb2a5f3884b49e"
+        };
+        firebase.initializeApp(firebaseConfig);
+    </script>
+    <style>
+        .admin-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+        }
+
+        .admin-header h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #c084fc, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .admin-back {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.2s;
+        }
+
+        .admin-back:hover {
+            color: var(--text-primary);
+        }
+
+        /* Quick Stats */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--bg-card, rgba(20, 24, 40, 0.6));
+            border: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-card-value {
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-card-label {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        /* Users Table */
+        .admin-search {
+            width: 100%;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+            font-family: inherit;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .users-table th {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .users-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary, rgba(255, 255, 255, 0.8));
+        }
+
+        .users-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .users-table .tier-cell {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.5px;
+        }
+
+        .admin-action-btn {
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary, rgba(255, 255, 255, 0.8));
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-right: 4px;
+            font-family: inherit;
+        }
+
+        .admin-action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .admin-action-btn.grant {
+            border-color: rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+        }
+
+        .admin-action-btn.revoke {
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        .admin-action-btn.admin-toggle {
+            border-color: rgba(168, 85, 247, 0.3);
+            color: #c084fc;
+        }
+
+        .admin-denied {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 60vh;
+            text-align: center;
+            color: var(--text-muted, rgba(255, 255, 255, 0.4));
+            font-size: 1.1rem;
+        }
+
+        .admin-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 60vh;
+            color: var(--text-muted, rgba(255, 255, 255, 0.4));
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .pagination button {
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div id="admin-loading" class="admin-loading">Loading...</div>
+    <div id="admin-denied" class="admin-denied" style="display:none;">
+        <div>
+            <div style="font-size: 2rem; margin-bottom: 12px;">🔒</div>
+            <p>Admin access required.</p>
+            <a href="index.html" style="color: #60a5fa; margin-top: 12px; display: inline-block;">← Back to Parlay
+                Bot</a>
+        </div>
+    </div>
+
+    <div id="admin-app" style="display: none;">
+        <div class="admin-container">
+            <div class="admin-header">
+                <h1>⚙️ Admin Dashboard</h1>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="admin-action-btn grant" onclick="openInviteModal()"
+                        style="padding: 6px 14px; font-size: 0.8rem;">+ Invite User</button>
+                    <a href="index.html" class="admin-back">← Back to App</a>
+                    <a href="#" class="admin-back" onclick="adminSignOut(); return false;" style="color: #f87171;">Sign
+                        Out</a>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-row" id="admin-stats"></div>
+
+            <!-- User Management -->
+            <h2 style="font-size: 1.1rem; margin-bottom: 12px; font-weight: 700;">User Management</h2>
+            <input type="text" class="admin-search" id="user-search" placeholder="Search by email or name..."
+                oninput="filterUsers()">
+
+            <div style="overflow-x: auto;">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Tier</th>
+                            <th>Status</th>
+                            <th>Granted</th>
+                            <th>Admin</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-tbody"></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+
+        <!-- Invite User Modal -->
+        <div id="invite-modal"
+            style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1001; display:none; align-items:center; justify-content:center;">
+            <div
+                style="background:rgba(15,18,35,0.97); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:28px; width:400px; max-width:90vw; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3
+                        style="font-size:1.1rem; font-weight:800; background:linear-gradient(135deg,#c084fc,#818cf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+                        + Invite New User</h3>
+                    <button onclick="document.getElementById('invite-modal').style.display='none'"
+                        style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:1.2rem;cursor:pointer;">✕</button>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label
+                        style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:rgba(255,255,255,0.5);margin-bottom:6px;">Email
+                        Address</label>
+                    <input type="email" id="invite-email" placeholder="user@example.com"
+                        style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:white;font-size:0.9rem;font-family:inherit;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label
+                        style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:rgba(255,255,255,0.5);margin-bottom:6px;">Assign
+                        Tier</label>
+                    <select id="invite-tier"
+                        style="width:100%;padding:10px 14px;background:#14182a;border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:white;font-size:0.9rem;font-family:inherit;box-sizing:border-box;-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22white%22><path d=%22M7 10l5 5 5-5z%22/></svg>');background-repeat:no-repeat;background-position:right 12px center;">
+                        <option value="free" style="background:#14182a;color:white;padding:8px;">Free</option>
+                        <option value="plus" style="background:#14182a;color:white;padding:8px;">Plus</option>
+                        <option value="pro" style="background:#14182a;color:white;padding:8px;">Pro</option>
+                    </select>
+                </div>
+                <div id="invite-msg"
+                    style="display:none; margin-bottom:12px; padding:8px 12px; border-radius:8px; font-size:0.85rem;">
+                </div>
+                <button onclick="inviteUser()"
+                    style="width:100%;padding:10px 16px;background:linear-gradient(135deg,#818cf8,#6366f1);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.85rem;cursor:pointer;font-family:inherit;">Send
+                    Invite</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const auth = firebase.auth();
+
+        // Helper: get Firebase ID token for authenticated API calls
+        async function getAuthHeader() {
+            const user = auth.currentUser;
+            if (!user) return {};
+            const token = await user.getIdToken();
+            return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+        }
+
+        async function apiFetch(path, options = {}) {
+            const headers = { ...await getAuthHeader(), ...(options.headers || {}) };
+            const res = await fetch(`/api${path}`, { ...options, headers });
+            if (!res.ok) throw new Error(`API error: ${res.status}`);
+            return res.json();
+        }
+
+        let allUsers = [];
+        let filteredUsers = [];
+        let currentPage = 0;
+        const PAGE_SIZE = 25;
+        let adminProfile = null;
+
+        async function init() {
+            auth.onAuthStateChanged(async (user) => {
+                if (!user) { showDenied(); return; }
+
+                try {
+                    // Load profile via API — admin check happens server-side
+                    const profileRes = await apiFetch('/profile');
+                    adminProfile = profileRes.data;
+
+                    if (!adminProfile?.is_admin) { showDenied(); return; }
+
+                    document.getElementById('admin-loading').style.display = 'none';
+                    document.getElementById('admin-app').style.display = 'block';
+
+                    await loadUsers();
+                    renderStats();
+                    renderUsers();
+                } catch (e) {
+                    console.error('Admin init error:', e);
+                    showDenied();
+                }
+            });
+        }
+
+        function showDenied() {
+            document.getElementById('admin-loading').style.display = 'none';
+            document.getElementById('admin-denied').style.display = 'flex';
+        }
+
+        async function loadUsers() {
+            try {
+                const result = await apiFetch('/admin/users');
+                allUsers = result.data || [];
+                filteredUsers = allUsers;
+            } catch (e) {
+                console.error('Error loading users:', e);
+            }
+        }
+
+        function renderStats() {
+            const total = allUsers.length;
+            const free = allUsers.filter(u => (u.granted_tier || u.subscription_tier) === 'free' || (!u.subscription_tier)).length;
+            const plus = allUsers.filter(u => (u.granted_tier || u.subscription_tier) === 'plus').length;
+            const pro = allUsers.filter(u => (u.granted_tier || u.subscription_tier) === 'pro').length;
+            const admins = allUsers.filter(u => u.is_admin).length;
+
+            document.getElementById('admin-stats').innerHTML = `
+            <div class="stat-card"><div class="stat-card-value">${total}</div><div class="stat-card-label">Total Users</div></div>
+            <div class="stat-card"><div class="stat-card-value">${free}</div><div class="stat-card-label">Free Tier</div></div>
+            <div class="stat-card"><div class="stat-card-value">${plus}</div><div class="stat-card-label">Plus Tier</div></div>
+            <div class="stat-card"><div class="stat-card-value">${pro}</div><div class="stat-card-label">Pro Tier</div></div>
+            <div class="stat-card"><div class="stat-card-value">${admins}</div><div class="stat-card-label">Admins</div></div>
+        `;
+        }
+
+        function filterUsers() {
+            const q = document.getElementById('user-search').value.toLowerCase().trim();
+            filteredUsers = q
+                ? allUsers.filter(u => (u.email || '').toLowerCase().includes(q) || (u.display_name || '').toLowerCase().includes(q))
+                : allUsers;
+            currentPage = 0;
+            renderUsers();
+        }
+
+        function renderUsers() {
+            const start = currentPage * PAGE_SIZE;
+            const page = filteredUsers.slice(start, start + PAGE_SIZE);
+            const tbody = document.getElementById('users-tbody');
+
+            tbody.innerHTML = page.map(u => {
+                const effectTier = u.granted_tier || u.subscription_tier || 'free';
+                const tierColor = effectTier === 'pro' ? '#c084fc' : effectTier === 'plus' ? '#60a5fa' : '#94a3b8';
+                const joined = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
+                const status = u.subscription_status || 'inactive';
+                return `<tr>
+                <td>${u.email || '—'}</td>
+                <td>${u.display_name || '—'}</td>
+                <td class="tier-cell" style="color: ${tierColor}">${effectTier}</td>
+                <td>${status}</td>
+                <td>${u.granted_tier ? '✅ ' + u.granted_tier : '—'}</td>
+                <td>${u.is_admin ? '👑' : '—'}</td>
+                <td>${joined}</td>
+                <td>
+                    <button class="admin-action-btn grant" onclick="grantTier('${u.id}', 'plus')" title="Grant Plus">+Plus</button>
+                    <button class="admin-action-btn grant" onclick="grantTier('${u.id}', 'pro')" title="Grant Pro">+Pro</button>
+                    <button class="admin-action-btn revoke" onclick="revokeTier('${u.id}')" title="Revoke Grant">Revoke</button>
+                    <button class="admin-action-btn admin-toggle" onclick="toggleAdmin('${u.id}', ${!u.is_admin})">${u.is_admin ? '−Admin' : '+Admin'}</button>
+                </td>
+            </tr>`;
+            }).join('');
+
+            const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE);
+            document.getElementById('pagination').innerHTML = `
+            <button onclick="changePage(-1)" ${currentPage === 0 ? 'disabled' : ''}>← Prev</button>
+            <span style="font-size:0.85rem; color: rgba(255,255,255,0.5);">Page ${currentPage + 1} of ${Math.max(totalPages, 1)}</span>
+            <button onclick="changePage(1)" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
+        `;
+        }
+
+        function changePage(dir) {
+            currentPage += dir;
+            renderUsers();
+        }
+
+        async function grantTier(uid, tier) {
+            if (!confirm(`Grant ${tier.toUpperCase()} tier to this user?`)) return;
+            try {
+                await apiFetch('/admin/grant-tier', {
+                    method: 'POST',
+                    body: JSON.stringify({ uid, tier })
+                });
+                await loadUsers();
+                renderStats();
+                renderUsers();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function revokeTier(uid) {
+            if (!confirm('Revoke granted tier from this user?')) return;
+            try {
+                await apiFetch('/admin/grant-tier', {
+                    method: 'POST',
+                    body: JSON.stringify({ uid, tier: null })
+                });
+                await loadUsers();
+                renderStats();
+                renderUsers();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function toggleAdmin(uid, makeAdmin) {
+            const action = makeAdmin ? 'promote to admin' : 'remove admin access from';
+            if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+            try {
+                await apiFetch('/admin/toggle-admin', {
+                    method: 'POST',
+                    body: JSON.stringify({ uid, is_admin: makeAdmin })
+                });
+                await loadUsers();
+                renderStats();
+                renderUsers();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        // ===== INVITE USER =====
+        function openInviteModal() {
+            const modal = document.getElementById('invite-modal');
+            modal.style.display = 'flex';
+            document.getElementById('invite-email').value = '';
+            document.getElementById('invite-tier').value = 'free';
+            const msg = document.getElementById('invite-msg');
+            msg.style.display = 'none';
+        }
+
+        async function inviteUser() {
+            const email = document.getElementById('invite-email').value.trim();
+            const tier = document.getElementById('invite-tier').value;
+
+            if (!email) { showInviteMsg('Please enter an email address.', '#f87171'); return; }
+
+            try {
+                await apiFetch('/admin/invite', {
+                    method: 'POST',
+                    body: JSON.stringify({ email: email.toLowerCase(), tier })
+                });
+                showInviteMsg(`Invite created for ${email}! They'll get ${tier} tier on sign-up.`, '#34d399');
+                await loadUsers();
+                renderStats();
+                renderUsers();
+            } catch (e) {
+                showInviteMsg('Error: ' + e.message, '#f87171');
+            }
+        }
+
+        function showInviteMsg(text, color) {
+            const msg = document.getElementById('invite-msg');
+            msg.textContent = text;
+            msg.style.display = 'block';
+            msg.style.background = color === '#34d399' ? 'rgba(52, 211, 153, 0.1)' : 'rgba(248, 113, 113, 0.1)';
+            msg.style.color = color;
+            msg.style.border = `1px solid ${color}30`;
+        }
+
+        // ===== SIGN OUT =====
+        async function adminSignOut() {
+            if (!confirm('Sign out?')) return;
+            await auth.signOut();
+            window.location.href = 'index.html';
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

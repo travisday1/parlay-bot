@@ -1,0 +1,15 @@
+{
+  "name": "parlay-bot-functions",
+  "description": "Cloud Functions for Parlay Bot API",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^4.9.0",
+    "pg": "^8.13.0",
+    "cors": "^2.8.5",
+    "@google/generative-ai": "^0.21.0",
+    "@balldontlie/sdk": "^1.2.2",
+    "dotenv": "^16.4.5"
+  }
+}

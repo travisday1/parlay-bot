@@ -1857,15 +1857,24 @@ async function loadPerformanceData(startDate, endDate) {
             .lte('daily_picks.pick_date', endDate);
 
         if (error) {
-            console.error('Error loading performance data:', error);
-            // Fallback: try querying separately
+            console.warn('⚠️ Supabase join query failed, using fallback:', error.message);
             return await loadPerformanceFallback(startDate, endDate);
+        }
+
+        // Validate that the join actually returned daily_picks data
+        if (results && results.length > 0) {
+            const hasJoinData = results[0].daily_picks && results[0].daily_picks.tier;
+            if (!hasJoinData) {
+                console.warn('⚠️ Join returned rows but daily_picks fields are empty, using fallback');
+                return await loadPerformanceFallback(startDate, endDate);
+            }
+            console.log(`📈 Performance: loaded ${results.length} results via join (tiers: ${[...new Set(results.map(r => r.daily_picks?.tier))].join(', ')})`);
         }
 
         return results || [];
     } catch (e) {
-        console.error('Performance data error:', e);
-        return [];
+        console.error('Performance data error, using fallback:', e);
+        return await loadPerformanceFallback(startDate, endDate);
     }
 }
 
@@ -1873,33 +1882,48 @@ async function loadPerformanceFallback(startDate, endDate) {
     // Fallback: query both tables and join client-side
     const { data: picks } = await sb
         .from('daily_picks')
-        .select('id, tier, pick_date, picked_odds, pick_type, game_id')
+        .select('id, tier, pick_date, picked_odds, pick_type, picked_team, confidence, game_id')
         .gte('pick_date', startDate)
         .lte('pick_date', endDate);
 
-    if (!picks || picks.length === 0) return [];
+    if (!picks || picks.length === 0) {
+        console.log('📈 Fallback: no daily_picks found in date range');
+        return [];
+    }
 
+    // Query pick_results in batches to avoid URL length limits
+    let allResults = [];
     const pickIds = picks.map(p => p.id);
-    const { data: results } = await sb
-        .from('pick_results')
-        .select('*')
-        .in('pick_id', pickIds);
+    for (let i = 0; i < pickIds.length; i += 100) {
+        const batch = pickIds.slice(i, i + 100);
+        const { data: results } = await sb
+            .from('pick_results')
+            .select('*')
+            .in('pick_id', batch);
+        if (results) allResults = allResults.concat(results);
+    }
 
-    if (!results) return [];
+    if (allResults.length === 0) {
+        console.log('📈 Fallback: no pick_results found for the picks');
+        return [];
+    }
 
-    // Join them
+    // Join them client-side
     const pickMap = {};
     picks.forEach(p => { pickMap[p.id] = p; });
 
-    return results.map(r => ({
+    const joined = allResults.map(r => ({
         ...r,
         daily_picks: pickMap[r.pick_id] || {}
     }));
+
+    console.log(`📈 Fallback: joined ${joined.length} results (tiers: ${[...new Set(joined.map(r => r.daily_picks?.tier))].join(', ')}, types: ${[...new Set(joined.map(r => r.daily_picks?.pick_type))].join(', ')})`);
+    return joined;
 }
 
 function calculateTierStats(results, tier) {
     const tierResults = results.filter(r => {
-        const pickTier = r.daily_picks?.tier;
+        const pickTier = (r.daily_picks?.tier || '').toLowerCase().trim();
         return pickTier === tier;
     });
 
@@ -2200,10 +2224,10 @@ async function calculateBreakdownStats(results) {
     }
 
     for (const r of results) {
-        const pickType = (r.daily_picks?.pick_type || 'unknown').toLowerCase();
+        const pickType = (r.daily_picks?.pick_type || 'unknown').toLowerCase().trim();
         const gameId = r.daily_picks?.game_id || r.game_id;
         const sportKey = gameMap[gameId] || 'unknown';
-        const result = r.result;
+        const result = (r.result || '').toLowerCase().trim();
         const payout = parseFloat(r.payout_on_100) || 0;
 
         // Bet type aggregation

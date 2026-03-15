@@ -1,0 +1,13 @@
+{
+  "projects": {},
+  "targets": {
+    "parlay-bot-1772763394": {
+      "hosting": {
+        "parlay-bot": [
+          "parlay-bot-app"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

@@ -2,5 +2,11 @@ node_modules/
 .env
 logs/
 temp_*.json
-check-db.js
 firebase-debug.log
+*.log
+
+# Firebase local cache
+.firebase/
+
+# Supabase export data (contains DB dumps)
+legacy/supabase-export/
